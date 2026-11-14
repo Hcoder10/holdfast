@@ -81,7 +81,7 @@ class Episode:
         self.mem = None
 
     # -- low level ---------------------------------------------------------
-    def _step(self, label, yaw=0.0, pitch=0.0, move=None):
+    def _step(self, label, yaw=0.0, pitch=0.0, move=None, hold=False):
         """One chunk: rotate by (yaw, pitch) degrees or translate. Returns the
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
         guide, reloc = None, None
@@ -90,7 +90,7 @@ class Episode:
             rel = [_translate(move, self.speed)] * CHUNK
         else:
             rel = [rel_pose(yaw_deg=yaw / CHUNK, pitch_deg=pitch / CHUNK)] * CHUNK
-            if self.mode == "memory" and self.mem is not None and (yaw or pitch) and self.frames:
+            if self.mode == "memory" and self.mem is not None and (yaw or pitch or hold) and self.frames:
                 usable = True
                 # Re-localise: where memory covers the current view, measure the offset
                 # between what memory says we should see and what is on screen, and
@@ -183,6 +183,14 @@ class Episode:
         if axis == "pitch":
             self.level_pitch = self.pitch
 
+    def _settle(self):
+        """Memory mode: finish exactly on the starting orientation and hold it, so a
+        return ends on the first view instead of a few degrees past it."""
+        y = (self.yaw + 180.0) % 360.0 - 180.0
+        if abs(y) > 0.5 or abs(self.pitch) > 0.5:
+            self._step(f"settle yaw {-y:+.1f} pitch {-self.pitch:+.1f}", yaw=-y, pitch=-self.pitch)
+        self._step("hold start view", hold=True)
+
     def _return_check(self):
         yaw, pitch, n = relative_rotation(self.frames[0], self.frames[-1], self.K)
         rec = {"label": "return check", "offset_yaw": yaw, "offset_pitch": pitch, "inliers": n}
@@ -238,6 +246,8 @@ class Episode:
         if returns_to_start:
             if self.mode == "closed":
                 self._reanchor()
+            if self.mode == "memory":
+                self._settle()
             final = self._return_check()
         return {"task_id": case["task_id"], "mode": self.mode, "plan": plan,
                 "chunks": s.chunk_id, "seconds": round(len(self.frames) / FPS, 2),

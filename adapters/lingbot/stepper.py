@@ -159,7 +159,7 @@ class LingBotStepper:
 
     # ----------------------------------------------------------------- guide
     @torch.no_grad()
-    def _encode_guide(self, frames, mask, erode=1, feather=2):
+    def _encode_guide(self, frames, mask, erode=5, feather=2):
         """Turn 12 remembered target frames (+ validity mask) into chunk latents.
 
         The VAE is causal in time, so the target frames are encoded after the
@@ -175,14 +175,19 @@ class LingBotStepper:
         m = torch.from_numpy(mask).to(self.device).float()            # [12, H, W]
         m = m.view(CHUNK, 4, self.h, self.w).amin(dim=1)               # all 4 frames valid
         m = -torch.nn.functional.max_pool2d(-m[None], 8)[0]            # all 8x8 pixels valid
-        for _ in range(erode):                                         # stay off the seam
-            m = -torch.nn.functional.max_pool2d(-m[None], 3, stride=1, padding=1)[0]
+        # Pull the pinned region back from where it meets unknown content, leaving a
+        # band the model fills itself so the join is generated rather than butted.
+        # Replicate padding: the frame edge is not a boundary with unknown content.
+        for _ in range(erode):
+            p = torch.nn.functional.pad(m[None], (1, 1, 1, 1), mode="replicate")
+            m = -torch.nn.functional.max_pool2d(-p, 3, stride=1)[0]
         if float(m.mean()) < 0.05:
             return None
         if feather:  # ramp the edge so the model blends remembered and new content
             soft = m[None]
             for _ in range(feather):
-                soft = torch.nn.functional.avg_pool2d(soft, 3, stride=1, padding=1)
+                p = torch.nn.functional.pad(soft, (1, 1, 1, 1), mode="replicate")
+                soft = torch.nn.functional.avg_pool2d(p, 3, stride=1)
             m = torch.minimum(m, soft[0] * soft[0])
         return lat.float(), m[None]
 
