@@ -157,14 +157,43 @@ class LingBotStepper:
                         f=CHUNK, h=self.lat_h, w=self.lat_w)
         return emb.to(self.pipe.param_dtype)
 
+    # ----------------------------------------------------------------- guide
+    @torch.no_grad()
+    def _encode_guide(self, frames, mask, erode=1):
+        """Turn 12 remembered target frames (+ validity mask) into chunk latents.
+
+        The VAE is causal in time, so the target frames are encoded after the
+        last 9 frames actually shown, and the final three latents are kept.
+        Returns (latents [16,3,h,w], mask [1,3,h,w] float) or None if too little
+        of the chunk is covered."""
+        ctx = self.shown[-9:]
+        fill = frames.copy()
+        fill[~mask] = np.broadcast_to(ctx[-1], frames.shape)[~mask]
+        clip = np.concatenate([ctx, fill])  # 21 frames -> 6 latents
+        v = torch.from_numpy(clip).to(self.device).permute(3, 0, 1, 2).float() / 127.5 - 1
+        lat = self.pipe.vae.encode([v])[0][:, -CHUNK:]
+        m = torch.from_numpy(mask).to(self.device).float()            # [12, H, W]
+        m = m.view(CHUNK, 4, self.h, self.w).amin(dim=1)               # all 4 frames valid
+        m = -torch.nn.functional.max_pool2d(-m[None], 8)[0]            # all 8x8 pixels valid
+        for _ in range(erode):                                         # stay off the seam
+            m = -torch.nn.functional.max_pool2d(-m[None], 3, stride=1, padding=1)[0]
+        if float(m.mean()) < 0.05:
+            return None
+        return lat.float(), m[None]
+
     # ------------------------------------------------------------------ step
     @torch.no_grad()
-    def step(self, rel, prompt=None, decode=True):
+    def step(self, rel, prompt=None, decode=True, guide=None, guide_from=1, guide_hard=True):
         """Generate one chunk.
 
         rel: three 4x4 frame-to-frame relative camera poses (see `rel_pose`).
              On the first chunk the first pose is forced to identity.
         prompt: optional new text condition from this chunk on.
+        guide: optional (frames uint8 [12,H,W,3], mask bool [12,H,W]) of remembered
+             content for this chunk. Where the mask is set, the denoiser is held to
+             the remembered latents from sampling step `guide_from` on, so the model
+             redraws what was there and only invents the rest. With guide_hard the
+             remembered latents also replace the final prediction in that region.
         Returns uint8 frames [T, H, W, 3] (T=9 on the first chunk, else 12), or
         None when decode=False.
         """
@@ -172,6 +201,10 @@ class LingBotStepper:
         p = self.pipe
         if prompt is not None:
             self.set_prompt(prompt)
+        g = None
+        if guide is not None and self.chunk_id > 0:
+            g = self._encode_guide(*guide)
+        self.last_guide_coverage = 0.0 if g is None else float(g[1].mean())
         rel = np.asarray(rel, dtype=np.float64).copy()
         assert rel.shape == (CHUNK, 4, 4)
         if self.chunk_id == 0:
@@ -191,6 +224,11 @@ class LingBotStepper:
                              generator=self.gen, device=self.device)
         with torch.amp.autocast("cuda", dtype=p.param_dtype):
             for i, t in enumerate(self.timesteps):
+                if g is not None and i >= guide_from:
+                    known = p.scheduler.add_noise(
+                        g[0], torch.randn(g[0].shape, generator=self.gen, device=self.device,
+                                          dtype=g[0].dtype), t)
+                    latent = g[1] * known + (1 - g[1]) * latent
                 pred = p.model(x=[latent], t=torch.stack([t]).to(self.device),
                                cross_attn_first_call=self.cross_first, **kwargs)[0]
                 self.cross_first = False
@@ -200,6 +238,8 @@ class LingBotStepper:
                     noise = torch.randn(x0.shape, generator=self.gen,
                                         device=x0.device, dtype=x0.dtype)
                     latent = p.scheduler.add_noise(x0, noise, self.timesteps[i + 1])
+            if g is not None and guide_hard:
+                x0 = (g[1] * g[0] + (1 - g[1]) * x0).to(x0.dtype)
             # write the clean chunk into the attention cache
             p.model(x=[x0], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
                     cross_attn_first_call=False, **kwargs)
@@ -207,7 +247,11 @@ class LingBotStepper:
         self.rel_poses.append(rel)
         self.prompts.append(self.prompt)
         self.chunk_id += 1
-        return self._decode_tail() if decode else None
+        if not decode:
+            return None
+        frames = self._decode_tail()
+        self.shown = frames if self.chunk_id == 1 else np.concatenate([self.shown[-12:], frames])
+        return frames
 
     # ---------------------------------------------------------------- decode
     @staticmethod
