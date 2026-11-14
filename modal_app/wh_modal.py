@@ -60,7 +60,8 @@ def download():
 
 
 @app.function(gpu="H200", volumes={W: weights, R: runs}, timeout=6 * 3600, cpu=8, memory=98304,
-              secrets=[modal.Secret.from_dict({k: os.environ.get(k, "") for k in ("PAST_API_KEY",)})])
+              secrets=[modal.Secret.from_dict({k: os.environ.get(k, "") for k in (
+                  "PAST_API_KEY", "PLAYER_API_URL", "PLAYER_API_KEY", "PLAYER_MODEL")})])
 def generate_shard(job: dict, shard: int = 0):
     import sys
     import time

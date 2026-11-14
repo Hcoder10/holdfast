@@ -22,6 +22,7 @@ import numpy as np
 
 from odometry import intrinsics_matrix, relative_rotation
 from panorama import RotationMemory, view_footprint
+from player import FROM_KIND, TO_KIND
 from stepper import CHUNK, FPS, rel_pose
 
 ALLOWED_CASE_FIELDS = ("task_id", "category", "prompt", "image_path", "image_caption",
@@ -30,6 +31,8 @@ ALLOWED_CASE_FIELDS = ("task_id", "category", "prompt", "image_path", "image_cap
 YAW_PER_TOKEN = 22.5     # "turn 90 degrees" is written as 4 tokens in the dataset
 PITCH_PER_TOKEN = 10.0   # "tilt 30 degrees" is written as 3 tokens
 MAX_YAW_PER_CHUNK = 30.0
+MAX_STEPS = 40          # PlayWorld's interaction budget
+MAX_AGENT_EXTRA = 2     # agent-added chunks allowed after each preset segment
 MIN_INLIERS = 30        # feature matches needed to trust a rotation measurement
 ASSUMED_GAIN = 0.85     # achieved / commanded rotation when it cannot be measured
 ARROWS = {"←": "left", "→": "right", "↑": "up", "↓": "down"}
@@ -93,7 +96,9 @@ def _translate(kind, speed):
 class Episode:
     def __init__(self, stepper, mode="closed", speed=1.0, wait_chunks=None, log=print,
                  guide_from=1, guide_hard=True, timeline=None, anchor=False,
-                 guide_via="latent", memory_entries=None):
+                 guide_via="latent", memory_entries=None, player=None):
+        self.player = player          # PlayWorld's agent player (player.Player) or None
+        self.history, self.chunk_frames = [], []
         # memory_entries: [{"heading": deg, "pitch": deg, "text": visual description,
         #                   "source_id": past.dev id, "url": web source}], retrieved from
         # shared memory for this scene; each becomes its own cross-attention entry
@@ -178,6 +183,9 @@ class Episode:
                           guide_hard=self.guide_hard, region=region, guide_via=self.guide_via)
         prev = self.frames[-1] if self.frames else new[0]
         my, mp, n = relative_rotation(prev, new[-1], self.K)
+        self.chunk_frames.append(new)
+        self.history.append(FROM_KIND.get(move) if move else "RIGHT" if yaw > 0 else "LEFT" if yaw < 0
+                            else "UP" if pitch > 0 else "DOWN" if pitch < 0 else "WAIT")
         cover = self.s.last_guide_coverage if guide is not None else 0.0
         first = not self.frames
         self.frames.extend(list(new))
@@ -300,6 +308,45 @@ class Episode:
         if axis == "pitch":
             self.level_pitch = self.pitch
 
+    def _agent_chunk(self, word):
+        """One chunk chosen by the agent player (an extension or a correction)."""
+        kind = TO_KIND[word]
+        if kind in ("left", "right", "up", "down"):
+            axis = "yaw" if kind in ("left", "right") else "pitch"
+            deg = (YAW_PER_TOKEN if axis == "yaw" else PITCH_PER_TOKEN) * (1 if kind in ("right", "up") else -1)
+            lt = self.last_turn
+            same = lt is not None and lt["axis"] == axis and np.sign(deg) == np.sign(lt["achieved"])
+            if same:   # the agent is extending the turn just made: keep it rewindable
+                self.turn_log = lt["frames"]
+            else:
+                self.last_turn = None
+            before = self.yaw if axis == "yaw" else self.pitch
+            self._step(f"agent {word}", **{axis: deg})
+            if same:
+                lt["achieved"] += (self.yaw if axis == "yaw" else self.pitch) - before
+                lt["target"] += deg
+                lt["yaw1"], lt["pitch1"] = self.yaw, self.pitch
+                self.turn_log = None
+        elif kind == "wait":
+            self._step("agent WAIT")
+        else:
+            self._step(f"agent {word}", move=kind)
+
+    def _consult(self, case, allow_next):
+        """Let the agent player extend or correct after a segment. Returns True if it
+        says the whole goal is complete."""
+        for _ in range(MAX_AGENT_EXTRA):
+            if self.s.chunk_id >= MAX_STEPS:
+                return False
+            word = self.player.decide(case["prompt"], self.frames[0], self.chunk_frames,
+                                      self.history, self.s.chunk_id, MAX_STEPS, allow_next)
+            if word == "END":
+                return True
+            if word == "NEXT":
+                return False
+            self._agent_chunk(word)
+        return False
+
     def _settle(self):
         """Memory mode: finish exactly on the starting orientation and hold it, so a
         return ends on the first view instead of a few degrees past it."""
@@ -366,6 +413,9 @@ class Episode:
                 moved = True
                 for _ in range(n):
                     self._step(kind, move=kind)
+            if self.player is not None and not (len(plan) == 1 and kind == "wait"):
+                if self._consult(case, allow_next=(kind, n) != plan[-1]):
+                    break
         returns_to_start = (not moved and abs(net_yaw) % 360 < 1e-6 and abs(net_pitch) < 1e-6
                             and any(k in ("left", "right", "up", "down") for k, _ in plan))
         final = None
@@ -376,6 +426,9 @@ class Episode:
                 self._settle()
             final = self._return_check()
         return {"task_id": case["task_id"], "mode": self.mode, "plan": plan,
+                "player": None if self.player is None else {"model": self.player.model,
+                                                            "trace": self.player.trace},
+                "actions": self.history,
                 "memory_entries": self.memory_entries, "flags": self.flags,
                 "anchored": self.anchor, "guide_via": self.guide_via,
                 "chunks": s.chunk_id, "seconds": round(len(self.frames) / FPS, 2),

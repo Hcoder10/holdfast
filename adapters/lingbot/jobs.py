@@ -61,8 +61,12 @@ def run_job(stepper, model, job, data, log=print, after_each=None):
                 tl = director.Timeline.load(os.path.join(tdir, task_id + ".json"))
             t0 = time.time()
             try:
+                pl = None
+                if job.get("player"):
+                    import player
+                    pl = player.Player()
                 ep = episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
-                                     log=lambda *x: None, timeline=tl)
+                                     log=lambda *x: None, timeline=tl, player=pl)
                 res = ep.run(case, img, seed=job.get("seed", 0))
             except Exception as e:  # one bad case must not sink the shard
                 import traceback
