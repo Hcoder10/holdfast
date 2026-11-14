@@ -71,7 +71,8 @@ def _translate(kind, speed):
 
 class Episode:
     def __init__(self, stepper, mode="closed", speed=1.0, wait_chunks=None, log=print,
-                 guide_from=1, guide_hard=True):
+                 guide_from=1, guide_hard=True, timeline=None):
+        self.timeline = timeline
         self.s, self.mode, self.speed, self.log = stepper, mode, speed, log
         self.wait_chunks, self.guide_from, self.guide_hard = wait_chunks, guide_from, guide_hard
         self.records, self.frames = [], []
@@ -111,7 +112,12 @@ class Episode:
                                         for i in range(12)])
                     if np.mean(masks) > 0.10:
                         guide = (np.stack(imgs), np.stack(masks))
-        new = self.s.step(rel, guide=guide, guide_from=self.guide_from, guide_hard=self.guide_hard)
+        prompt = stage = None
+        if self.timeline is not None:
+            stage = self.timeline.stage_at(len(self.frames) / FPS)
+            prompt = stage["prompt"]
+        new = self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
+                          guide_hard=self.guide_hard)
         prev = self.frames[-1] if self.frames else new[0]
         my, mp, n = relative_rotation(prev, new[-1], self.K)
         cover = self.s.last_guide_coverage if guide is not None else 0.0
@@ -146,6 +152,7 @@ class Episode:
         self.records.append({"chunk": self.s.chunk_id - 1, "label": label,
                              "measured_yaw": my, "measured_pitch": mp, "inliers": n,
                              "guide_coverage": round(cover, 2), "reloc": reloc,
+                             "state": None if stage is None else stage.get("state"),
                              "est_yaw": round(self.yaw, 1), "est_pitch": round(self.pitch, 1)})
         return got
 
@@ -193,12 +200,15 @@ class Episode:
     # -- episode -----------------------------------------------------------
     def run(self, case, image, seed=0):
         s = self.s
-        s.reset(image, case["image_caption"], seed=seed)
+        first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
+        s.reset(image, first_prompt, seed=seed)
         fx, fy, cx, cy = s.intrinsics_480
         k = s.w / 832
         self.K = intrinsics_matrix(fx * k, fy * k, s.w / 2, s.h / 2)
         if self.mode == "memory":
             self.mem = RotationMemory(self.K, s.w, s.h)
+            if self.timeline is not None:
+                self.mem.exclude0 = self.timeline.target_mask(s.h, s.w)
         plan = parse_actions(case["action"])
         net_yaw = net_pitch = 0.0
         moved = False

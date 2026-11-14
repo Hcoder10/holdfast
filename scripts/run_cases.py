@@ -19,6 +19,7 @@ from PIL import Image
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "adapters", "lingbot"))
 from episode import Episode, load_case  # noqa: E402
 from stepper import FPS, LingBotStepper  # noqa: E402
+from director import Timeline  # noqa: E402
 
 SPLIT = {"GC": "gc", "IF": "if"}
 
@@ -36,6 +37,7 @@ ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--guide_hard", type=int, default=1)
 ap.add_argument("--guide_from", type=int, default=1)
 ap.add_argument("--tag", default="")
+ap.add_argument("--timelines", default=None, help="dir of <task_id>.json director timelines")
 a = ap.parse_args()
 
 
@@ -67,12 +69,15 @@ for task_id in a.cases.split(","):
         d = os.path.join(a.out, f"{model}_{mode}{a.tag}", task_id)
         os.makedirs(d, exist_ok=True)
         t0 = time.time()
-        ep = Episode(stepper, mode=mode, wait_chunks=a.wait_chunks, log=lambda *x: None,
+        tl = None
+        if a.timelines and os.path.exists(os.path.join(a.timelines, task_id + ".json")):
+            tl = Timeline.load(os.path.join(a.timelines, task_id + ".json"))
+        ep = Episode(stepper, mode=mode, wait_chunks=a.wait_chunks, log=lambda *x: None, timeline=tl,
                      guide_from=a.guide_from, guide_hard=bool(a.guide_hard))
         res = ep.run(case, img, seed=a.seed)
         video = stepper.video()
         imageio.mimsave(os.path.join(d, "video.mp4"), video, fps=FPS, quality=8)
-        res.update(model=model, wall_seconds=round(time.time() - t0, 1), prompt=case["prompt"],
+        res.update(directed=tl is not None, model=model, wall_seconds=round(time.time() - t0, 1), prompt=case["prompt"],
                    action=case["action"], peak_vram_gb=round(torch.cuda.max_memory_allocated() / 2**30, 1))
         json.dump(res, open(os.path.join(d, "result.json"), "w"), indent=1, ensure_ascii=False)
         rc = res["return_check"]

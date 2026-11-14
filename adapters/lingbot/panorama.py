@@ -32,6 +32,7 @@ class RotationMemory:
         self.w, self.h = width, height
         self.max_angle, self.min_spacing, self.border = max_angle, min_spacing, border
         self.keys = []  # (R c2w, frame uint8 HxWx3, chunk index, turn direction), oldest first
+        self.exclude0 = None  # uint8 HxW mask in the first frame's view: never pinned
 
     def add(self, frame, yaw, pitch=0.0, force=False, chunk=0, direction=0):
         r = rot(yaw, pitch)
@@ -66,4 +67,9 @@ class RotationMemory:
             mask |= take
             if mask.all():
                 break
+        if self.exclude0 is not None and angle_between(rt, np.eye(3)) < 80.0:
+            # the evolving target must be redrawn in its current state, not recalled
+            H0 = self.K @ rt.T @ self.Kinv
+            ex = cv2.warpPerspective(self.exclude0, H0, (self.w, self.h), flags=cv2.INTER_NEAREST) > 0
+            mask &= ~ex
         return img, mask
