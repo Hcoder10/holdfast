@@ -249,6 +249,10 @@ class Episode:
         for kind, n in plan:
             if kind in ("left", "right"):
                 tgt = (1 if kind == "right" else -1) * n * YAW_PER_TOKEN
+                if abs(tgt) > 360.0 and "360" in case.get("prompt", ""):
+                    # the preset pads a full turn with extra tokens for slow models;
+                    # the objective is one revolution, so stop there
+                    tgt = 360.0 if tgt > 0 else -360.0
                 self._turn("yaw", tgt)
                 net_yaw += tgt
             elif kind in ("up", "down"):

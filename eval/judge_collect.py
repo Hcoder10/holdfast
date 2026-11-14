@@ -34,7 +34,12 @@ for sysdir in sorted(p for p in a.judged.iterdir() if p.is_dir()):
         if not sr.exists():
             continue
         result = json.loads(sr.read_text(encoding="utf8"))
-        gate = json.loads(gr.read_text(encoding="utf8")).get("verdict") if gr.exists() else None
+        if isinstance(result, list):
+            result = result[0]
+        gate = None
+        if gr.exists():
+            g = json.loads(gr.read_text(encoding="utf8"))
+            gate = (g[0] if isinstance(g, list) else g).get("verdict")
         raw = normalized_score(f"{sysdir.name}/{case.name}", result)
         score = 1.0 if gate == "fail" else raw
         rows.append({"run": names.get(sysdir.name, sysdir.name), "task_id": case.name,

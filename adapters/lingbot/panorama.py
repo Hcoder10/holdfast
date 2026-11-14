@@ -43,6 +43,9 @@ def start_footprint(K, width, height, yaw, pitch=0.0):
     return view_footprint(K, width, height, yaw, pitch, 0.0, 0.0)
 
 
+FIRST_FRAME = -99   # chunk index recorded for the starting frame
+
+
 class RotationMemory:
     def __init__(self, K, width, height, max_angle=65.0, min_spacing=6.0, border=6):
         self.K, self.Kinv = K, np.linalg.inv(K)
@@ -74,7 +77,11 @@ class RotationMemory:
         for r, frame, born, turned in self.keys:  # oldest first: first view wins
             if angle_between(rt, r) > self.max_angle:
                 continue
-            if chunk is not None and chunk - born < min_age and not (direction and turned == -direction):
+            # Eligible: the first frame (the anchor a full turn must close on), or a
+            # frame recorded while turning the other way (a reversal). Other frames
+            # from the same sweep are not used: their headings carry accumulated
+            # odometry error, and compositing them produced vertical slices.
+            if chunk is not None and born != FIRST_FRAME and not (direction and turned == -direction):
                 continue
             H = self.K @ rt.T @ r @ self.Kinv
             warped = cv2.warpPerspective(frame, H, (self.w, self.h), flags=cv2.INTER_LINEAR)
