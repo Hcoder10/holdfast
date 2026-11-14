@@ -18,9 +18,15 @@ import math
 import os
 import sys
 
+import importlib
+
 import numpy as np
 import sdpa_shim
 import torch
+
+# A long-running job server reloads this module to pick up edits; reload the shim
+# with it so its masking code is current, and re-install it before anchored steps.
+sdpa_shim = importlib.reload(sdpa_shim)
 import torchvision.transforms.functional as TF
 from einops import rearrange
 
@@ -105,6 +111,7 @@ class LingBotStepper:
         key = (global_prompt, tuple(entries))
         if key == getattr(self, "regional", None):
             return
+        sdpa_shim.install(force=True)
         p, m = self.pipe, self.pipe.model.config
         embs = [self._encode(global_prompt)[0]] + [self._encode(e)[0] for e in entries]
         assert sum(e.shape[0] for e in embs) <= 512, "anchored context exceeds 512 text tokens"

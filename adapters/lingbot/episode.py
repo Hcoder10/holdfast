@@ -37,6 +37,27 @@ KEYS = {"w": "forward", "s": "back", "a": "strafe_left", "d": "strafe_right",
         "u": "up", "j": "down", "i": "up", "k": "down", "l": "right"}
 
 
+def recall_entries(task_id):
+    """Ask shared memory (past.dev) what lies in each direction around this scene.
+    Entries are the cartographer's facts of the form
+    '<CASE> heading <deg>: <visual description>'; one per heading is used. This runs
+    inside the generation process, at the start of the episode."""
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
+    import mem
+    hits = mem.recall("composer", f"{task_id} heading: what is visible in each direction "
+                                  f"around the starting viewpoint", limit=20)
+    out = {}
+    for h in hits:
+        for text in [h.get("text") or ""] + list(h.get("excerpts") or []):
+            m = re.search(rf"{task_id} heading (-?\d+)(?: pitch (-?\d+))?: (.+)", text)
+            if m and int(m.group(1)) not in out:
+                out[int(m.group(1))] = {"heading": int(m.group(1)), "pitch": int(m.group(2) or 0),
+                                        "text": m.group(3).strip().rstrip("."),
+                                        "source_id": h.get("source_id"), "author": h.get("author")}
+    return [out[k] for k in sorted(out)]
+
+
 def load_case(data_json, task_id):
     """Read one case, keeping only the fields a world model is allowed to see."""
     for c in json.load(open(data_json, encoding="utf8")):
@@ -77,12 +98,22 @@ class Episode:
         #                   "source_id": past.dev id, "url": web source}], retrieved from
         # shared memory for this scene; each becomes its own cross-attention entry
         self.memory_entries = list(memory_entries or [])
-        self.guide_via = guide_via   # "latent": inpaint remembered latents; "sink": attention only
         self.timeline = timeline
         # anchor: bind the subject's text to the starting view's footprint through
         # cross-attention instead of swapping the whole prompt when facing away
-        self.anchor = bool(anchor and timeline is not None and timeline.spec.get("away_prompt"))
+        # Options can ride on the mode string ("memory+anchor+memtok", "memory+sink") so a
+        # job file alone selects them: anchor = world-anchored cross-attention,
+        # memtok = recall direction-tagged entries from shared memory, sink = memory
+        # through the attention cache instead of latent guidance.
+        flags = mode.split("+")
+        mode = flags[0]
+        self.flags = flags[1:]
+        anchor = anchor or "anchor" in flags
+        if "sink" in flags:
+            guide_via = "sink"
         self.s, self.mode, self.speed, self.log = stepper, mode, speed, log
+        self.guide_via = guide_via   # "latent": inpaint remembered latents; "sink": attention only
+        self.anchor = bool(anchor and timeline is not None and timeline.spec.get("away_prompt"))
         self.wait_chunks, self.guide_from, self.guide_hard = wait_chunks, guide_from, guide_hard
         self.records, self.frames = [], []
         self.yaw = self.pitch = 0.0   # estimated orientation since the last translation
@@ -297,6 +328,8 @@ class Episode:
     # -- episode -----------------------------------------------------------
     def run(self, case, image, seed=0):
         s = self.s
+        if "memtok" in self.flags and not self.memory_entries:
+            self.memory_entries = recall_entries(case["task_id"])
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
         if self.anchor:
@@ -343,7 +376,8 @@ class Episode:
                 self._settle()
             final = self._return_check()
         return {"task_id": case["task_id"], "mode": self.mode, "plan": plan,
-                "memory_entries": self.memory_entries,
+                "memory_entries": self.memory_entries, "flags": self.flags,
+                "anchored": self.anchor, "guide_via": self.guide_via,
                 "chunks": s.chunk_id, "seconds": round(len(self.frames) / FPS, 2),
                 "returns_to_start": returns_to_start, "return_check": final,
                 "records": self.records}
