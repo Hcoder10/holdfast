@@ -1,0 +1,13 @@
+{
+  "process": "A man is running forward along a curved running track, moving steadily away from the camera around the bend.",
+  "target_box": [0.21, 0.32, 0.32, 0.8],
+  "away_prompt": "A wide green grass infield beside a curving red running track with white lane lines, under a clear blue sky. Beyond the track, a dark metal railing runs along a grassy strip, and a row of tall leafy green trees stands in full summer foliage. Bright natural sunlight, crisp realistic photographic style, with the grass and track continuing to the far edge of the frame.",
+  "sources": [
+    {"fact": "In a study of 37,201 everyday runs, the average preferred running speed was about 3.25 m/s for men and 2.74 m/s for women, so a male runner covers roughly 16 m in 5 seconds.", "url": "https://getfitcraft.com/blog/average-running-speed"}
+  ],
+  "stages": [
+    {"from_s": 0, "state": "running toward the bend", "prompt": "A man wearing a red shirt and black shorts is running forward along a curved red rubber running track marked with white lines, passing a large blank white rectangular wall standing on the adjacent green grass. Tall green trees and a clear blue sky stand behind the track, in bright daylight."},
+    {"from_s": 2.5, "state": "about 8 m further along the curve", "prompt": "A man wearing a red shirt and black shorts has run further along the curved red rubber running track marked with white lines, now smaller in the frame and nearer the bend of the track. The large blank white rectangular wall stands unchanged on the green grass beside the track. Tall green trees and a clear blue sky stand behind, in bright daylight."},
+    {"from_s": 5.0, "state": "about 16 m further, around the bend", "prompt": "A man wearing a red shirt and black shorts is now well along the curve of the red rubber running track marked with white lines, small in the distance and around the bend. The large blank white rectangular wall stands unchanged on the green grass beside the track, now behind him. Tall green trees and a clear blue sky stand behind, in bright daylight."}
+  ]
+}

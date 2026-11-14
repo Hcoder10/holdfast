@@ -1,0 +1,13 @@
+{
+  "process": "A hand is drawing with a red marker on paper, adding colour and new banded sections to a tower in a landscape sketch.",
+  "target_box": [0.27, 0.34, 0.67, 0.6],
+  "away_prompt": "A textured light wooden tabletop in soft warm daylight, with the edge of a large white sheet of paper continuing across the surface. Near the far edge lies a loose stack of folded sketch paper, and a soft beige fabric edge sits at the side of the frame. Realistic photographic style, shallow depth of field, gentle shadows, calm uncluttered art-studio setting.",
+  "sources": [
+    {"fact": "An individual classic portrait drawing usually takes about 3 to 4 minutes for a caricature artist working in pencil or ink, so a few seconds of marker work adds only a small number of strokes.", "url": "https://sensiblepencil.com/faq-items/how-many-people-can-you-draw-per-hour/"}
+  ],
+  "stages": [
+    {"from_s": 0, "state": "tower stalk with marker at its tip", "prompt": "A close-up view of a hand using a red marker to add color to a detailed drawing on paper, including a tower, autumn trees, leaves, water, and landscape details. The marker tip rests at the top of the tower's thin grey and red striped stalk, which widens to the right toward a red-capped base. Soft daylight, realistic photographic style."},
+    {"from_s": 2.5, "state": "one new red band added", "prompt": "A close-up view of a hand using a red marker to add color to a detailed drawing on paper, including a tower, autumn trees, leaves, water, and landscape details. The tower's thin stalk now carries one new red and grey band drawn just below the marker tip, beside the earlier bands, while the marker keeps drawing at the top of the stalk. Soft daylight, realistic photographic style."},
+    {"from_s": 5.0, "state": "two new bands and stalk extended", "prompt": "A close-up view of a hand using a red marker to add color to a detailed drawing on paper, including a tower, autumn trees, leaves, water, and landscape details. The tower's stalk now carries two new red and grey bands below the marker tip, and a short grey line has been added to extend its top. The trees and landscape are unchanged. Soft daylight, realistic photographic style."}
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "agent": "cartographer",
+  "cases": {
+    "GC022": {
+      "choice": "A",
+      "reason": "Named landmark: Taj Mahal, Agra.",
+      "facts": [
+        {"text": "GC022 Taj Mahal: the mausoleum stands on the right bank of the Yamuna River where the river takes a sharp turn eastwards, so the river lies beyond the tomb rather than at the garden viewpoint.", "url": "https://asi.nic.in/pages/WorldHeritageAgra"},
+        {"text": "GC022 Taj Mahal: the Charbagh garden in front of the tomb is a square divided into four quarters by shallow water channels and fountains, with wide walkways and cypress avenues along the sides.", "url": "https://asi.nic.in/pages/WorldHeritageAgra"},
+        {"text": "GC022 Taj Mahal: on the terrace flanking the white marble tomb, the red sandstone mosque is on the west side (on the left when seen from the garden) and the Mihman Khana assembly hall is on the east side (on the right), the two being near-identical mirror-symmetrical buildings.", "url": "https://www.tajmahal.gov.in/outlying-building.aspx"}
+      ]
+    },
+    "GC029": {
+      "choice": "A",
+      "reason": "Named landmark: Marina Bay Sands, Singapore.",
+      "facts": [
+        {"text": "GC029 Marina Bay Sands: the ArtScience Museum, designed by Moshe Safdie, is a lotus-like structure of ten petals of varying radii on a base sunk into the earth and surrounded by bay water and a giant lily pond, lying along the same waterfront.", "url": "https://museum.red-dot.sg/pages/red-dot-marina-bay-art-and-design-guide"},
+        {"text": "GC029 Marina Bay Sands: Gardens by the Bay sits a short walk further along the waterfront from Marina Bay, with Supertrees and conservatories as its landmarks.", "url": "https://museum.red-dot.sg/pages/red-dot-marina-bay-art-and-design-guide"},
+        {"text": "GC029 Marina Bay Sands: around the bay sit the boat-topped Marina Bay Sands, the lotus-shaped ArtScience Museum, the Merlion and the Supertrees of Gardens by the Bay, reflected in the water and lit after dark.", "url": "https://theatlasodyssey.com/destinations/marina-bay-and-gardens-by-the-bay/"}
+      ]
+    },
+    "GC027": {
+      "choice": "C",
+      "reason": "The sign names a playground (Shilhai Street Sports Center), but the only search results were stock-photo pages with no layout or surroundings information, so no sourced place facts were stored.",
+      "facts": []
+    },
+    "OE024": {
+      "choice": "B",
+      "reason": "Ongoing process: a man hand-painting lettering on a wall.",
+      "facts": [
+        {"text": "OE024 painting: a hand-painted mural is typically finished in about one to two days on site, and a small feature wall under 5 square metres takes about 4 to 6 hours for one artist.", "url": "https://topmurals.com/blog/how-long-mural-takes/"}
+      ]
+    },
+    "OE014": {
+      "choice": "B",
+      "reason": "Ongoing process: watercolor painting on paper.",
+      "facts": [
+        {"text": "OE014 watercolor painting: a thin watercolor wash dries in about 5 to 10 minutes at normal room humidity, and thick or very wet washes take 20 to 40 minutes.", "url": "https://cindybriggs.com/watercolor-painting-where-to-start/"}
+      ]
+    },
+    "OE015": {
+      "choice": "B",
+      "reason": "Ongoing process: drawing with a marker on paper.",
+      "facts": [
+        {"text": "OE015 drawing: an individual classic portrait drawing usually takes about 3 to 4 minutes for a caricature artist.", "url": "https://sensiblepencil.com/faq-items/how-many-people-can-you-draw-per-hour/"}
+      ]
+    },
+    "OE045": {
+      "choice": "B",
+      "reason": "Ongoing process: a man running on a track.",
+      "facts": [
+        {"text": "OE045 running: in a study of 37,201 everyday runs, the average preferred running speed was about 3.25 m/s for men and 2.74 m/s for women.", "url": "https://getfitcraft.com/blog/average-running-speed"}
+      ]
+    }
+  }
+}

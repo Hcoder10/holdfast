@@ -1,0 +1,13 @@
+{
+  "process": "A hand is painting a watercolor wash on paper, brushing a green stripe that grows beside a pale blue area.",
+  "target_box": [0.3, 0.45, 0.8, 1.0],
+  "away_prompt": "A light grey tabletop in soft natural daylight, with a sheet of brown cardboard running along its edge and a folded white cloth lying at a distance. Plain, neutral surfaces stretch to the edges of the frame with gentle shadows and a warm white balance. Realistic photographic style, shallow depth of field, calm and uncluttered table.",
+  "sources": [
+    {"fact": "A thin watercolor wash dries in about 5 to 10 minutes at normal room humidity, and thick or very wet washes take 20 to 40 minutes, so a wash laid down during the episode is still wet and glossy when the camera returns.", "url": "https://cindybriggs.com/watercolor-painting-where-to-start/"}
+  ],
+  "stages": [
+    {"from_s": 0, "state": "blue wash and one green stripe", "prompt": "A close-up view of a hand holding a black paintbrush over taped watercolor paper on a cardboard sheet. A pale blue wash fills the right side of the paper, and a green stripe runs diagonally from the brush tip toward the bottom of the frame. A white paint palette and a crumpled paper towel sit blurred in the background under soft daylight."},
+    {"from_s": 2.5, "state": "green stripe widened and extended", "prompt": "A close-up view of a hand holding a black paintbrush over taped watercolor paper on a cardboard sheet. The pale blue wash on the right side is unchanged, while the green stripe has widened and grown longer, with fresh wet green paint spreading down from the brush tip. A white paint palette and a crumpled paper towel sit blurred in the background under soft daylight."},
+    {"from_s": 5.0, "state": "broad green band to the bottom edge", "prompt": "A close-up view of a hand holding a black paintbrush over taped watercolor paper on a cardboard sheet. The pale blue wash on the right side is unchanged, and a broad, glossy green band now runs from the top of the painted area all the way to the bottom edge of the paper, still wet and shiny. A white paint palette and a crumpled paper towel sit blurred in the background under soft daylight."}
+  ]
+}
