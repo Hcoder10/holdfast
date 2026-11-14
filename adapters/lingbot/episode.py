@@ -86,11 +86,14 @@ class Episode:
         self.wait_chunks, self.guide_from, self.guide_hard = wait_chunks, guide_from, guide_hard
         self.records, self.frames = [], []
         self.yaw = self.pitch = 0.0   # estimated orientation since the last translation
+        self.last_turn = None         # the turn just completed, kept for rewinding
+        self.turn_log = None          # frames of the turn in progress
+        self.trust_command = False
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
 
     # -- low level ---------------------------------------------------------
-    def _step(self, label, yaw=0.0, pitch=0.0, move=None, hold=False):
+    def _step(self, label, yaw=0.0, pitch=0.0, move=None, hold=False, rewind=None):
         """One chunk: rotate by (yaw, pitch) degrees or translate. Returns the
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
         guide, reloc = None, None
@@ -99,7 +102,9 @@ class Episode:
             rel = [_translate(move, self.speed)] * CHUNK
         else:
             rel = [rel_pose(yaw_deg=yaw / CHUNK, pitch_deg=pitch / CHUNK)] * CHUNK
-            if self.mode == "memory" and self.mem is not None and (yaw or pitch or hold) and self.frames:
+            if rewind is not None:
+                guide = rewind   # the frames already seen on the way out, played back
+            elif self.mode == "memory" and self.mem is not None and (yaw or pitch or hold) and self.frames:
                 usable = True
                 # Re-localise: where memory covers the current view, measure the offset
                 # between what memory says we should see and what is on screen, and
@@ -147,6 +152,7 @@ class Episode:
         self.frames.extend(list(new))
         if move is not None:
             # a new standing point: rotational memory starts over from here
+            self.last_turn = None
             self.yaw = self.pitch = self.level_pitch = 0.0
             if self.mem is not None:
                 self.mem.keys = []
@@ -154,7 +160,7 @@ class Episode:
             got = (None, None)
         else:
             # where the view is pinned by memory the commanded turn is what happened
-            if cover > 0.5 and self.guide_via == "latent":
+            if rewind is not None or self.trust_command or (cover > 0.5 and self.guide_via == "latent"):
                 got = (yaw, pitch)
             elif my is None or n < MIN_INLIERS:
                 # nothing to measure against (water, sky): assume the usual shortfall
@@ -163,10 +169,14 @@ class Episode:
                 got = (my, mp)
             y0, p0 = self.yaw, self.pitch
             self.yaw, self.pitch = y0 + got[0], p0 + got[1]
+            if self.turn_log is not None and rewind is None:
+                for j in range(len(new)):
+                    f = (j + 1) / len(new)
+                    self.turn_log.append((new[j], y0 + got[0] * f, p0 + got[1] * f))
             if self.mem is not None:
                 if first:
                     self.mem.add(new[0], 0.0, 0.0, force=True, chunk=-99)
-                if cover < 0.5:
+                if cover < 0.5 and rewind is None:
                     for j in (len(new) // 2, len(new) - 1):
                         f = (j + 1) / len(new)
                         self.mem.add(new[j], y0 + got[0] * f, p0 + got[1] * f,
@@ -174,10 +184,40 @@ class Episode:
         self.records.append({"chunk": self.s.chunk_id - 1, "label": label,
                              "measured_yaw": my, "measured_pitch": mp, "inliers": n,
                              "guide_coverage": round(cover, 2), "reloc": reloc,
+                             "rewind": rewind is not None,
                              "state": None if stage is None else stage.get("state"),
                              "away": bool(stage is not None and prompt != stage["prompt"]),
                              "est_yaw": round(self.yaw, 1), "est_pitch": round(self.pitch, 1)})
         return got
+
+    def _rewind(self, axis, target_deg, nominal):
+        """Turn back along the arc just swept by replaying the views seen on the way
+        out, in reverse. A return retraces the outbound path, so the correct picture
+        for each moment already exists: it is the outbound frame at the mirrored
+        position. Feeding those frames to the denoiser makes the way back identical
+        to the way out, with no warping and no dependence on angle estimates, and
+        it ends exactly on the view the turn started from."""
+        lt = self.last_turn
+        frames = lt["frames"]
+        share = min(1.0, abs(target_deg) / max(abs(lt["achieved"]), 1e-6))
+        L = len(frames)
+        per = target_deg / nominal
+        y_end = lt["yaw1"] + (lt["yaw0"] - lt["yaw1"]) * share
+        p_end = lt["pitch1"] + (lt["pitch0"] - lt["pitch1"]) * share
+        for c in range(nominal):
+            imgs, masks = [], []
+            for j in range(12):
+                prog = (c * 12 + j + 1) / (nominal * 12)
+                img, fy, fp = frames[int(round((1.0 - prog * share) * (L - 1)))]
+                m = np.ones(img.shape[:2], bool)
+                if self.mem is not None and self.mem.exclude0 is not None:
+                    m &= self.mem.excluded(fy, fp) == 0   # the evolving target is redrawn
+                imgs.append(img)
+                masks.append(m)
+            self._step(f"{axis} rewind {per:+.1f}", rewind=(np.stack(imgs), np.stack(masks)),
+                       **{axis: per})
+        self.yaw, self.pitch = y_end, p_end
+        self.last_turn = None
 
     def _turn(self, axis, target_deg):
         """Rotate by target_deg about yaw or pitch."""
@@ -187,6 +227,32 @@ class Episode:
             per = target_deg / nominal
             for _ in range(nominal):
                 self._step(f"{axis} {per:+.1f}", **{axis: per})
+            return
+        lt = self.last_turn
+        if (self.mode == "memory" and lt is not None and lt["axis"] == axis
+                and np.sign(target_deg) == -np.sign(lt["achieved"])
+                and abs(target_deg) <= abs(lt["target"]) + 1.0 and len(lt["frames"]) > 12):
+            self._rewind(axis, target_deg, nominal)
+            return
+        self.turn_log = []
+        y_start, p_start = self.yaw, self.pitch
+        self._turn_out(axis, target_deg, nominal)
+        self.last_turn = {"axis": axis, "target": target_deg, "frames": self.turn_log,
+                          "achieved": (self.yaw - y_start) if axis == "yaw" else (self.pitch - p_start),
+                          "yaw0": y_start, "pitch0": p_start, "yaw1": self.yaw, "pitch1": self.pitch}
+        self.turn_log = None
+
+    def _turn_out(self, axis, target_deg, nominal):
+        if axis == "pitch":
+            # Tilts run open loop at the preset rate. Sky and ground give odometry
+            # little to measure, and believing an unmeasured tilt had happened made
+            # the camera skip it altogether (GC041).
+            per = target_deg / nominal
+            self.trust_command = True
+            for _ in range(nominal):
+                self._step(f"pitch {per:+.1f}", pitch=per)
+            self.trust_command = False
+            self.level_pitch = self.pitch
             return
         start = self.yaw if axis == "yaw" else self.pitch
         for _ in range(2 * nominal + 2):

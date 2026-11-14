@@ -61,6 +61,17 @@ class RotationMemory:
         self.keys.append((r, frame.copy(), chunk, direction))
         return True
 
+    def excluded(self, yaw, pitch=0.0):
+        """Where the evolving target (marked in the first frame) falls in a view at
+        (yaw, pitch): uint8 [H, W], non-zero inside. Zeros if there is no target."""
+        if self.exclude0 is None:
+            return np.zeros((self.h, self.w), np.uint8)
+        rt = rot(yaw, pitch)
+        if angle_between(rt, np.eye(3)) >= 80.0:
+            return np.zeros((self.h, self.w), np.uint8)
+        H0 = self.K @ rt.T @ self.Kinv
+        return cv2.warpPerspective(self.exclude0, H0, (self.w, self.h), flags=cv2.INTER_NEAREST)
+
     def render(self, yaw, pitch=0.0, chunk=None, direction=0, min_age=4):
         """Remembered view at an orientation: (image uint8 HxWx3, mask bool HxW).
 
