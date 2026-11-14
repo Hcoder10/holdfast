@@ -93,6 +93,35 @@ class LingBotStepper:
             dtype=p.pipe_dtype, device=self.device)
         self.cross_first = True
 
+    def set_anchored(self, global_prompt, entries):
+        """World-anchored text with any number of entries.
+
+        `entries` is a list of text strings. Each is encoded on its own and placed
+        after `global_prompt` in the cross-attention context. `step(regions=...)`
+        then supplies, per entry, where that entry's place in the world falls in the
+        frame; only image tokens there may attend to it. This is how retrieved
+        memories enter the model: as separate keys and values in cross-attention,
+        each tied to a direction, rather than as words merged into one prompt."""
+        key = (global_prompt, tuple(entries))
+        if key == getattr(self, "regional", None):
+            return
+        p, m = self.pipe, self.pipe.model.config
+        embs = [self._encode(global_prompt)[0]] + [self._encode(e)[0] for e in entries]
+        assert sum(e.shape[0] for e in embs) <= 512, "anchored context exceeds 512 text tokens"
+        self.regional = key
+        self.spans, at = [], embs[0].shape[0]
+        for e in embs[1:]:
+            self.spans.append((at, at + e.shape[0]))
+            at += e.shape[0]
+        self.subject_span = self.spans[0] if self.spans else (0, 0)
+        self.prompt = "ANCHORED: " + global_prompt + " || " + " || ".join(entries)
+        self.context = [torch.cat(embs, dim=0)]
+        self.cross_cache = p._initialize_crossattn_cache(
+            num_layers=m.num_layers,
+            shape=[1, 512, m.num_heads, m.dim // m.num_heads],
+            dtype=p.pipe_dtype, device=self.device)
+        self.cross_first = True
+
     def set_regional(self, global_prompt, subject_prompt):
         """World-anchored text. Two descriptions are encoded separately and placed
         side by side in the text context: `global_prompt` (the surroundings; every
@@ -117,13 +146,16 @@ class LingBotStepper:
         self.cross_first = True
 
     def _cross_mask(self, region):
-        """[3*tokens_per_frame, 512] bool from a [3, H, W] footprint (1 = inside)."""
+        """[3*tokens_per_frame, 512] bool. `region` is one [3, H, W] footprint (for a
+        single anchored entry) or a list of them, one per entry (1 = inside)."""
         th, tw = self.lat_h // 2, self.lat_w // 2
-        r = torch.as_tensor(region, dtype=torch.float32, device=self.device)[None]
-        r = torch.nn.functional.adaptive_avg_pool2d(r, (th, tw))[0] > 0.5   # [3, th, tw]
+        regions = region if isinstance(region, (list, tuple)) else [region]
+        spans = getattr(self, "spans", None) or [self.subject_span]
         mask = torch.ones(CHUNK * th * tw, 512, dtype=torch.bool, device=self.device)
-        a, b = self.subject_span
-        mask[:, a:b] = r.reshape(-1, 1)
+        for (a, b), reg in zip(spans, regions):
+            r = torch.as_tensor(np.asarray(reg), dtype=torch.float32, device=self.device)[None]
+            r = torch.nn.functional.adaptive_avg_pool2d(r, (th, tw))[0] > 0.5   # [3, th, tw]
+            mask[:, a:b] = r.reshape(-1, 1)
         return mask
 
     # ----------------------------------------------------------------- reset

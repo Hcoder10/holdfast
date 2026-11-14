@@ -69,6 +69,29 @@ def image_for(split, case):
     raise FileNotFoundError(rel)
 
 
+def recall_entries(task_id, log):
+    """Ask shared memory (past.dev) what lies in each direction around this scene.
+    Entries are the cartographer's facts of the form
+    '<CASE> heading <deg>: <visual description>'; the newest per heading is used."""
+    import re
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
+    import mem
+    hits = mem.recall("composer", f"{task_id} heading: what is visible in each direction "
+                                  f"around the starting viewpoint", limit=20)
+    out = {}
+    for h in hits:
+        for text in [h.get("text") or ""] + list(h.get("excerpts") or []):
+            m = re.search(rf"{task_id} heading (-?\d+)(?: pitch (-?\d+))?: (.+)", text)
+            if m and int(m.group(1)) not in out:
+                out[int(m.group(1))] = {"heading": int(m.group(1)), "pitch": int(m.group(2) or 0),
+                                        "text": m.group(3).strip(), "source_id": h.get("source_id"),
+                                        "author": h.get("author")}
+    entries = [out[k] for k in sorted(out)]
+    log(f"{task_id} recalled {len(entries)} memory entries: " +
+        "; ".join(f"{e['heading']}: {e['text'][:50]}" for e in entries))
+    return entries
+
+
 def run_job(stepper, model, job, log):
     for task_id in job["cases"]:
         split, case = find_case(task_id)
@@ -82,8 +105,9 @@ def run_job(stepper, model, job, log):
             tdir = job.get("timelines")
             if tdir and os.path.exists(os.path.join(tdir, task_id + ".json")):
                 tl = director.Timeline.load(os.path.join(tdir, task_id + ".json"))
+            entries = recall_entries(task_id, log) if job.get("memory_tokens") else None
             t0 = time.time()
-            ep = episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
+            ep = episode.Episode(stepper, mode=mode, memory_entries=entries, wait_chunks=job.get("wait_chunks", 40),
                          log=lambda *x: None, timeline=tl, anchor=job.get("anchor", 0),
                          guide_via=job.get("guide_via", "latent"),
                          guide_from=job.get("guide_from", 1), guide_hard=bool(job.get("guide_hard", 1)))

@@ -26,16 +26,21 @@ def angle_between(ra, rb):
     return math.degrees(math.acos(float(np.clip(c, -1, 1))))
 
 
-def start_footprint(K, width, height, yaw, pitch=0.0):
-    """Where the starting view (yaw 0, pitch 0) falls in the frame of a camera turned
-    to (yaw, pitch): a uint8 [H, W] mask, 1 inside. All zeros once it is behind or
-    beside the camera."""
-    rt = rot(yaw, pitch)
-    if angle_between(rt, np.eye(3)) > 85.0:
+def view_footprint(K, width, height, yaw, pitch=0.0, ref_yaw=0.0, ref_pitch=0.0):
+    """Where a reference view facing (ref_yaw, ref_pitch) falls in the frame of a
+    camera turned to (yaw, pitch): a uint8 [H, W] mask, 1 inside. All zeros once the
+    reference view is behind or beside the camera."""
+    rt, rr = rot(yaw, pitch), rot(ref_yaw, ref_pitch)
+    if angle_between(rt, rr) > 85.0:
         return np.zeros((height, width), np.uint8)
-    H = K @ rt.T @ np.linalg.inv(K)
+    H = K @ rt.T @ rr @ np.linalg.inv(K)
     return cv2.warpPerspective(np.ones((height, width), np.uint8), H, (width, height),
                                flags=cv2.INTER_NEAREST)
+
+
+def start_footprint(K, width, height, yaw, pitch=0.0):
+    """Footprint of the starting view (heading 0)."""
+    return view_footprint(K, width, height, yaw, pitch, 0.0, 0.0)
 
 
 class RotationMemory:

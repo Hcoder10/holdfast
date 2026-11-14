@@ -21,7 +21,7 @@ import re
 import numpy as np
 
 from odometry import intrinsics_matrix, relative_rotation
-from panorama import RotationMemory, start_footprint
+from panorama import RotationMemory, view_footprint
 from stepper import CHUNK, FPS, rel_pose
 
 ALLOWED_CASE_FIELDS = ("task_id", "category", "prompt", "image_path", "image_caption",
@@ -72,7 +72,11 @@ def _translate(kind, speed):
 class Episode:
     def __init__(self, stepper, mode="closed", speed=1.0, wait_chunks=None, log=print,
                  guide_from=1, guide_hard=True, timeline=None, anchor=False,
-                 guide_via="latent"):
+                 guide_via="latent", memory_entries=None):
+        # memory_entries: [{"heading": deg, "pitch": deg, "text": visual description,
+        #                   "source_id": past.dev id, "url": web source}], retrieved from
+        # shared memory for this scene; each becomes its own cross-attention entry
+        self.memory_entries = list(memory_entries or [])
         self.guide_via = guide_via   # "latent": inpaint remembered latents; "sink": attention only
         self.timeline = timeline
         # anchor: bind the subject's text to the starting view's footprint through
@@ -125,12 +129,15 @@ class Episode:
             prompt = self.timeline.prompt_at(t, self.yaw + yaw / 2, self.pitch + pitch / 2)
         region = None
         if self.anchor and move is None:
-            self.s.set_regional(self.timeline.spec["away_prompt"], stage["prompt"])
+            entries = [stage["prompt"]] + [m["text"] for m in self.memory_entries]
+            self.s.set_anchored(self.timeline.spec["away_prompt"], entries)
             prompt = None
-            region = np.stack([start_footprint(self.K, self.s.w, self.s.h,
+            heads = [(0.0, 0.0)] + [(float(m["heading"]), float(m.get("pitch", 0.0)))
+                                    for m in self.memory_entries]
+            region = [np.stack([view_footprint(self.K, self.s.w, self.s.h,
                                                self.yaw + yaw * (j + 1) / CHUNK,
-                                               self.pitch + pitch * (j + 1) / CHUNK)
-                               for j in range(CHUNK)])
+                                               self.pitch + pitch * (j + 1) / CHUNK, hy, hp)
+                                for j in range(CHUNK)]) for hy, hp in heads]
         new = self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
                           guide_hard=self.guide_hard, region=region, guide_via=self.guide_via)
         prev = self.frames[-1] if self.frames else new[0]
@@ -227,7 +234,8 @@ class Episode:
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
         if self.anchor:
-            s.set_regional(self.timeline.spec["away_prompt"], first_prompt)
+            s.set_anchored(self.timeline.spec["away_prompt"],
+                           [first_prompt] + [m["text"] for m in self.memory_entries])
         fx, fy, cx, cy = s.intrinsics_480
         k = s.w / 832
         self.K = intrinsics_matrix(fx * k, fy * k, s.w / 2, s.h / 2)
@@ -265,6 +273,7 @@ class Episode:
                 self._settle()
             final = self._return_check()
         return {"task_id": case["task_id"], "mode": self.mode, "plan": plan,
+                "memory_entries": self.memory_entries,
                 "chunks": s.chunk_id, "seconds": round(len(self.frames) / FPS, 2),
                 "returns_to_start": returns_to_start, "return_check": final,
                 "records": self.records}
