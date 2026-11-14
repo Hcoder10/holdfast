@@ -114,8 +114,10 @@ class Episode:
                         guide = (np.stack(imgs), np.stack(masks))
         prompt = stage = None
         if self.timeline is not None:
-            stage = self.timeline.stage_at(len(self.frames) / FPS)
-            prompt = stage["prompt"]
+            t = len(self.frames) / FPS
+            stage = self.timeline.stage_at(t)
+            # heading at the middle of the chunk about to be generated
+            prompt = self.timeline.prompt_at(t, self.yaw + yaw / 2, self.pitch + pitch / 2)
         new = self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
                           guide_hard=self.guide_hard)
         prev = self.frames[-1] if self.frames else new[0]
@@ -153,6 +155,7 @@ class Episode:
                              "measured_yaw": my, "measured_pitch": mp, "inliers": n,
                              "guide_coverage": round(cover, 2), "reloc": reloc,
                              "state": None if stage is None else stage.get("state"),
+                             "away": bool(stage is not None and prompt != stage["prompt"]),
                              "est_yaw": round(self.yaw, 1), "est_pitch": round(self.pitch, 1)})
         return got
 

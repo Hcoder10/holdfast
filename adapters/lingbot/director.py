@@ -11,6 +11,8 @@ A timeline is JSON:
 {
   "process": "one sentence naming what is happening",
   "target_box": [x0, y0, x1, y1] | null,   # normalised box of the evolving thing in frame 0
+  "away_prompt": "what the camera sees when it faces away from the starting view" | null,
+  "sources": [{"fact": "...", "url": "..."}],   # web facts the plan relied on, if any
   "stages": [{"from_s": 0, "state": "short state label", "prompt": "full scene description"}, ...]
 }
 It is written by a planning model that sees only the first frame, the caption,
@@ -20,6 +22,15 @@ the benchmark rubric.
 import json
 
 import numpy as np
+
+
+AWAY_YAW_DEG = 60.0     # beyond this the starting view has left a ~79 degree wide frame
+AWAY_PITCH_DEG = 45.0
+
+
+def facing_start(yaw, pitch=0.0):
+    y = (yaw + 180.0) % 360.0 - 180.0
+    return abs(y) < AWAY_YAW_DEG and abs(pitch) < AWAY_PITCH_DEG
 
 
 class Timeline:
@@ -40,7 +51,18 @@ class Timeline:
                 cur = s
         return cur
 
-    def prompt_at(self, t):
+    def prompt_at(self, t, yaw=0.0, pitch=0.0):
+        """Text for this moment and this heading.
+
+        The text prompt conditions the whole frame. If it keeps describing the
+        subject of the starting view while the camera faces elsewhere, the model
+        paints that subject again wherever it looks (a second Taj Mahal behind you,
+        the same word on every wall). So when the starting view is out of frame the
+        prompt switches to `away_prompt`, a description of the surroundings without
+        the subject, and switches back to the current stage as the view returns."""
+        away = self.spec.get("away_prompt")
+        if away and not facing_start(yaw, pitch):
+            return away
         return self.stage_at(t)["prompt"]
 
     def target_mask(self, height, width, pad=0.04):

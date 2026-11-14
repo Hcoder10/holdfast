@@ -16,7 +16,20 @@ Write a timeline as JSON with exactly these fields:
   box in the first frame of the thing whose state changes as the process advances
   (the paper being painted, the person crossing, the cup being filled). Use `null`
   if the change is spread over the whole frame.
-- `stages`: 3 to 6 entries, each `{"from_s": seconds, "state": "...", "prompt": "..."}`.
+- `away_prompt`: a 40 to 80 word description of what the camera sees when it has
+  turned away from the starting view and the subject of the first frame is out of
+  frame. Describe only the surroundings in the other directions: the same place,
+  light, weather and style, continuing what is visible at the edges of the first
+  frame. It must NOT mention the subject of the first frame (the landmark, the
+  person, the object being worked on) or anything that only exists in the starting
+  view, because the world model paints whatever the text mentions and would create
+  a second copy. If the camera never turns away, use `null`.
+  If you were given sourced facts about the real place, use them here so the
+  surroundings are the real ones, and list each fact you used in `sources`.
+- `sources`: a list of `{"fact": "...", "url": "..."}` for web facts the plan relies
+  on (empty list if none).
+- `stages`: 1 to 6 entries (a single stage is right when nothing in the scene is in
+  progress), each `{"from_s": seconds, "state": "...", "prompt": "..."}`.
   - The first has `from_s: 0` and describes the first frame as it is.
   - Later stages describe the same scene after the process has advanced by a
     physically plausible amount for the elapsed time. Progress must be cumulative and
