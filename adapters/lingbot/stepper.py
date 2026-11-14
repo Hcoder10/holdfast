@@ -226,10 +226,48 @@ class LingBotStepper:
             m = torch.minimum(m, soft[0] * soft[0])
         return lat.float(), m[None]
 
+    # ------------------------------------------------------ memory via attention
+    @torch.no_grad()
+    def write_sink(self, lat):
+        """Graft 2: put remembered content where the model already looks for anchors.
+
+        The model keeps its first `sink_size` latent frames in the attention cache
+        for the whole rollout and every later frame attends to them. Here those
+        slots are overwritten with keys and values computed from `lat` ([16,3,h,w],
+        remembered views of the place the camera is about to face). The model is
+        not forced to copy anything: it attends to the remembered views as context
+        and renders the frame itself, so there is no pasted region and no seam.
+
+        The keys/values come from a clean (timestep 0) forward of `lat` on a
+        scratch cache at position 0, i.e. computed exactly as the real first chunk's
+        were, then copied into the first three sink frames of every layer."""
+        p, m = self.pipe, self.pipe.model.config
+        n = CHUNK * self.frame_seqlen
+        scratch = p._initialize_self_kv_cache(
+            num_layers=m.num_layers,
+            shape=[1, self.kv_size, m.num_heads, m.dim // m.num_heads],
+            dtype=p.pipe_dtype, device=self.device)
+        cond = torch.concat([torch.zeros(4, CHUNK, self.lat_h, self.lat_w, device=self.device),
+                             self.cond_lat[:, [COND_EXACT_LATENTS - 1] * CHUNK]])
+        still = self._plucker(np.stack([np.eye(4)] * CHUNK))
+        kwargs = {"context": [self.context[0]], "seq_len": self.max_seq_len, "y": [cond],
+                  "dit_cond_dict": {"c2ws_plucker_emb": still.chunk(1, dim=0)},
+                  "kv_cache": scratch, "crossattn_cache": self.cross_cache,
+                  "current_start": 0, "max_attention_size": self.kv_size,
+                  "frame_seqlen": self.frame_seqlen}
+        with torch.amp.autocast("cuda", dtype=p.param_dtype):
+            p.model(x=[lat.to(self.device)], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
+                    cross_attn_first_call=self.cross_first, **kwargs)
+        self.cross_first = False
+        for dst, src in zip(self.self_cache, scratch):
+            dst["k"][:, :n] = src["k"][:, :n]
+            dst["v"][:, :n] = src["v"][:, :n]
+        del scratch
+
     # ------------------------------------------------------------------ step
     @torch.no_grad()
     def step(self, rel, prompt=None, decode=True, guide=None, guide_from=1, guide_hard=True,
-             region=None):
+             region=None, guide_via="latent"):
         """Generate one chunk.
 
         rel: three 4x4 frame-to-frame relative camera poses (see `rel_pose`).
@@ -251,6 +289,12 @@ class LingBotStepper:
         if guide is not None and self.chunk_id > 0:
             g = self._encode_guide(*guide)
         self.last_guide_coverage = 0.0 if g is None else float(g[1].mean())
+        if g is not None and guide_via == "sink":
+            # memory through attention only: remembered views become the anchor
+            # frames the model attends to; nothing is imposed on the latents
+            if self.chunk_id >= 2 and self.last_guide_coverage > 0.5:
+                self.write_sink(g[0])
+            g = None
         rel = np.asarray(rel, dtype=np.float64).copy()
         assert rel.shape == (CHUNK, 4, 4)
         if self.chunk_id == 0:

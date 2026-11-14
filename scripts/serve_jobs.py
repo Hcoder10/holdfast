@@ -85,6 +85,7 @@ def run_job(stepper, model, job, log):
             t0 = time.time()
             ep = episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
                          log=lambda *x: None, timeline=tl, anchor=job.get("anchor", 0),
+                         guide_via=job.get("guide_via", "latent"),
                          guide_from=job.get("guide_from", 1), guide_hard=bool(job.get("guide_hard", 1)))
             res = ep.run(case, img, seed=job.get("seed", 0))
             imageio.mimsave(os.path.join(d, "video.mp4"), stepper.video(), fps=FPS, quality=8)

@@ -71,7 +71,9 @@ def _translate(kind, speed):
 
 class Episode:
     def __init__(self, stepper, mode="closed", speed=1.0, wait_chunks=None, log=print,
-                 guide_from=1, guide_hard=True, timeline=None, anchor=False):
+                 guide_from=1, guide_hard=True, timeline=None, anchor=False,
+                 guide_via="latent"):
+        self.guide_via = guide_via   # "latent": inpaint remembered latents; "sink": attention only
         self.timeline = timeline
         # anchor: bind the subject's text to the starting view's footprint through
         # cross-attention instead of swapping the whole prompt when facing away
@@ -130,7 +132,7 @@ class Episode:
                                                self.pitch + pitch * (j + 1) / CHUNK)
                                for j in range(CHUNK)])
         new = self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
-                          guide_hard=self.guide_hard, region=region)
+                          guide_hard=self.guide_hard, region=region, guide_via=self.guide_via)
         prev = self.frames[-1] if self.frames else new[0]
         my, mp, n = relative_rotation(prev, new[-1], self.K)
         cover = self.s.last_guide_coverage if guide is not None else 0.0
@@ -145,7 +147,7 @@ class Episode:
             got = (None, None)
         else:
             # where the view is pinned by memory the commanded turn is what happened
-            if cover > 0.5:
+            if cover > 0.5 and self.guide_via == "latent":
                 got = (yaw, pitch)
             elif my is None or n < MIN_INLIERS:
                 # nothing to measure against (water, sky): assume the usual shortfall
