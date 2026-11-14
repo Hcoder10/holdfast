@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+# third-party checkouts and weights live outside git
+third_party/
+weights/
+# rollouts are large; keep summaries in results/, videos elsewhere
+runs/
+*.mp4
+*.safetensors
+*.pt
+*.ckpt
