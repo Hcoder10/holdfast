@@ -243,9 +243,9 @@ class LingBotStepper:
         were, then copied into the first three sink frames of every layer."""
         p, m = self.pipe, self.pipe.model.config
         n = CHUNK * self.frame_seqlen
-        scratch = p._initialize_self_kv_cache(
+        scratch = p._initialize_self_kv_cache(   # one chunk long: a full-size one would not fit
             num_layers=m.num_layers,
-            shape=[1, self.kv_size, m.num_heads, m.dim // m.num_heads],
+            shape=[1, n, m.num_heads, m.dim // m.num_heads],
             dtype=p.pipe_dtype, device=self.device)
         cond = torch.concat([torch.zeros(4, CHUNK, self.lat_h, self.lat_w, device=self.device),
                              self.cond_lat[:, [COND_EXACT_LATENTS - 1] * CHUNK]])
@@ -253,7 +253,7 @@ class LingBotStepper:
         kwargs = {"context": [self.context[0]], "seq_len": self.max_seq_len, "y": [cond],
                   "dit_cond_dict": {"c2ws_plucker_emb": still.chunk(1, dim=0)},
                   "kv_cache": scratch, "crossattn_cache": self.cross_cache,
-                  "current_start": 0, "max_attention_size": self.kv_size,
+                  "current_start": 0, "max_attention_size": n,
                   "frame_seqlen": self.frame_seqlen}
         with torch.amp.autocast("cuda", dtype=p.param_dtype):
             p.model(x=[lat.to(self.device)], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
