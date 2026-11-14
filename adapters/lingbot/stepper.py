@@ -159,7 +159,7 @@ class LingBotStepper:
 
     # ----------------------------------------------------------------- guide
     @torch.no_grad()
-    def _encode_guide(self, frames, mask, erode=1):
+    def _encode_guide(self, frames, mask, erode=1, feather=2):
         """Turn 12 remembered target frames (+ validity mask) into chunk latents.
 
         The VAE is causal in time, so the target frames are encoded after the
@@ -179,6 +179,11 @@ class LingBotStepper:
             m = -torch.nn.functional.max_pool2d(-m[None], 3, stride=1, padding=1)[0]
         if float(m.mean()) < 0.05:
             return None
+        if feather:  # ramp the edge so the model blends remembered and new content
+            soft = m[None]
+            for _ in range(feather):
+                soft = torch.nn.functional.avg_pool2d(soft, 3, stride=1, padding=1)
+            m = torch.minimum(m, soft[0] * soft[0])
         return lat.float(), m[None]
 
     # ------------------------------------------------------------------ step

@@ -74,6 +74,7 @@ class Episode:
         self.wait_chunks, self.guide_from, self.guide_hard = wait_chunks, guide_from, guide_hard
         self.records, self.frames = [], []
         self.yaw = self.pitch = 0.0   # estimated orientation since the last translation
+        self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
 
     # -- low level ---------------------------------------------------------
@@ -81,13 +82,15 @@ class Episode:
         """One chunk: rotate by (yaw, pitch) degrees or translate. Returns the
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
         guide = None
+        direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
         if move is not None:
             rel = [_translate(move, self.speed)] * CHUNK
         else:
             rel = [rel_pose(yaw_deg=yaw / CHUNK, pitch_deg=pitch / CHUNK)] * CHUNK
             if self.mode == "memory" and self.mem is not None and (yaw or pitch) and self.frames:
                 imgs, masks = zip(*[self.mem.render(self.yaw + yaw * (i + 1) / 12,
-                                                    self.pitch + pitch * (i + 1) / 12)
+                                                    self.pitch + pitch * (i + 1) / 12,
+                                                    chunk=self.s.chunk_id, direction=direction)
                                     for i in range(12)])
                 if np.mean(masks) > 0.10:
                     guide = (np.stack(imgs), np.stack(masks))
@@ -99,10 +102,10 @@ class Episode:
         self.frames.extend(list(new))
         if move is not None:
             # a new standing point: rotational memory starts over from here
-            self.yaw = self.pitch = 0.0
+            self.yaw = self.pitch = self.level_pitch = 0.0
             if self.mem is not None:
                 self.mem.keys = []
-                self.mem.add(new[-1], 0.0, 0.0, force=True)
+                self.mem.add(new[-1], 0.0, 0.0, force=True, chunk=self.s.chunk_id - 1)
             got = (None, None)
         else:
             # where the view is pinned by memory the commanded turn is what happened
@@ -111,11 +114,12 @@ class Episode:
             self.yaw, self.pitch = y0 + got[0], p0 + got[1]
             if self.mem is not None:
                 if first:
-                    self.mem.add(new[0], 0.0, 0.0, force=True)
+                    self.mem.add(new[0], 0.0, 0.0, force=True, chunk=-99)
                 if cover < 0.5:
                     for j in (len(new) // 2, len(new) - 1):
                         f = (j + 1) / len(new)
-                        self.mem.add(new[j], y0 + got[0] * f, p0 + got[1] * f)
+                        self.mem.add(new[j], y0 + got[0] * f, p0 + got[1] * f,
+                                     chunk=self.s.chunk_id - 1, direction=direction)
         self.records.append({"chunk": self.s.chunk_id - 1, "label": label,
                              "measured_yaw": my, "measured_pitch": mp, "inliers": n,
                              "guide_coverage": round(cover, 2),
@@ -138,7 +142,13 @@ class Episode:
             if abs(remaining) < 4.0:
                 break
             cmd = float(np.clip(remaining, -MAX_YAW_PER_CHUNK, MAX_YAW_PER_CHUNK))
-            self._step(f"{axis} cmd {cmd:+.1f}", **{axis: cmd})
+            kw = {axis: cmd}
+            if axis == "yaw" and abs(self.pitch - self.level_pitch) > 3.0:
+                # the model tends to tilt during a sweep; steer back to the horizon
+                kw["pitch"] = float(np.clip(self.level_pitch - self.pitch, -12.0, 12.0))
+            self._step(f"{axis} cmd {cmd:+.1f}" + (f" pitch {kw['pitch']:+.1f}" if "pitch" in kw else ""), **kw)
+        if axis == "pitch":
+            self.level_pitch = self.pitch
 
     def _return_check(self):
         yaw, pitch, n = relative_rotation(self.frames[0], self.frames[-1], self.K)
