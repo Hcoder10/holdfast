@@ -21,9 +21,20 @@ import torch
 from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "adapters", "lingbot"))
-from director import Timeline  # noqa: E402
-from episode import Episode, load_case  # noqa: E402
+import director  # noqa: E402
+import episode  # noqa: E402
+import odometry  # noqa: E402
+import panorama  # noqa: E402
+import stepper as stepper_mod  # noqa: E402
 from stepper import FPS, LingBotStepper  # noqa: E402
+
+
+def hot_reload(st):
+    """Pick up edited adapter code without reloading the model weights."""
+    import importlib
+    for m in (odometry, panorama, director, stepper_mod, episode):
+        importlib.reload(m)
+    st.__class__ = stepper_mod.LingBotStepper
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--repo", required=True)
@@ -41,7 +52,7 @@ def find_case(task_id):
     splits = [SPLIT[task_id[:2]]] if task_id[:2] in SPLIT else ["insight", "outsight"]
     for sp in splits:
         try:
-            return sp, load_case(os.path.join(a.data, sp, "data.json"), task_id)
+            return sp, episode.load_case(os.path.join(a.data, sp, "data.json"), task_id)
         except KeyError:
             pass
     raise KeyError(task_id)
@@ -68,9 +79,9 @@ def run_job(stepper, model, job, log):
             tl = None
             tdir = job.get("timelines")
             if tdir and os.path.exists(os.path.join(tdir, task_id + ".json")):
-                tl = Timeline.load(os.path.join(tdir, task_id + ".json"))
+                tl = director.Timeline.load(os.path.join(tdir, task_id + ".json"))
             t0 = time.time()
-            ep = Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
+            ep = episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
                          log=lambda *x: None, timeline=tl,
                          guide_from=job.get("guide_from", 1), guide_hard=bool(job.get("guide_hard", 1)))
             res = ep.run(case, img, seed=job.get("seed", 0))
@@ -101,6 +112,7 @@ while not os.path.exists(os.path.join(a.jobs, "STOP")):
         logf.write(msg + "\n")
         logf.flush()
     try:
+        hot_reload(stepper)
         run_job(stepper, model, json.load(open(path)), log)
         log("JOB DONE")
     except Exception:
