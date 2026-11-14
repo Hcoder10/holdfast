@@ -30,6 +30,8 @@ ALLOWED_CASE_FIELDS = ("task_id", "category", "prompt", "image_path", "image_cap
 YAW_PER_TOKEN = 22.5     # "turn 90 degrees" is written as 4 tokens in the dataset
 PITCH_PER_TOKEN = 10.0   # "tilt 30 degrees" is written as 3 tokens
 MAX_YAW_PER_CHUNK = 30.0
+MIN_INLIERS = 30        # feature matches needed to trust a rotation measurement
+ASSUMED_GAIN = 0.85     # achieved / commanded rotation when it cannot be measured
 ARROWS = {"←": "left", "→": "right", "↑": "up", "↓": "down"}
 KEYS = {"w": "forward", "s": "back", "a": "strafe_left", "d": "strafe_right",
         "u": "up", "j": "down", "i": "up", "k": "down", "l": "right"}
@@ -81,19 +83,34 @@ class Episode:
     def _step(self, label, yaw=0.0, pitch=0.0, move=None):
         """One chunk: rotate by (yaw, pitch) degrees or translate. Returns the
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
-        guide = None
+        guide, reloc = None, None
         direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
         if move is not None:
             rel = [_translate(move, self.speed)] * CHUNK
         else:
             rel = [rel_pose(yaw_deg=yaw / CHUNK, pitch_deg=pitch / CHUNK)] * CHUNK
             if self.mode == "memory" and self.mem is not None and (yaw or pitch) and self.frames:
-                imgs, masks = zip(*[self.mem.render(self.yaw + yaw * (i + 1) / 12,
-                                                    self.pitch + pitch * (i + 1) / 12,
-                                                    chunk=self.s.chunk_id, direction=direction)
-                                    for i in range(12)])
-                if np.mean(masks) > 0.10:
-                    guide = (np.stack(imgs), np.stack(masks))
+                usable = True
+                # Re-localise: where memory covers the current view, measure the offset
+                # between what memory says we should see and what is on screen, and
+                # correct the orientation estimate. If they cannot be matched, the
+                # estimate is not trustworthy enough to paste from, so skip guidance.
+                seen, cover = self.mem.render(self.yaw, self.pitch, chunk=self.s.chunk_id,
+                                              direction=direction)
+                if cover.mean() > 0.25:
+                    dy, dp, n = relative_rotation(seen, self.frames[-1], self.K)
+                    if dy is not None and n >= MIN_INLIERS and abs(dy) < 40 and abs(dp) < 40:
+                        self.yaw, self.pitch = self.yaw + dy, self.pitch + dp
+                        reloc = (round(dy, 1), round(dp, 1), n)
+                    else:
+                        usable, reloc = False, ("failed", n)
+                if usable:
+                    imgs, masks = zip(*[self.mem.render(self.yaw + yaw * (i + 1) / 12,
+                                                        self.pitch + pitch * (i + 1) / 12,
+                                                        chunk=self.s.chunk_id, direction=direction)
+                                        for i in range(12)])
+                    if np.mean(masks) > 0.10:
+                        guide = (np.stack(imgs), np.stack(masks))
         new = self.s.step(rel, guide=guide, guide_from=self.guide_from, guide_hard=self.guide_hard)
         prev = self.frames[-1] if self.frames else new[0]
         my, mp, n = relative_rotation(prev, new[-1], self.K)
@@ -109,7 +126,13 @@ class Episode:
             got = (None, None)
         else:
             # where the view is pinned by memory the commanded turn is what happened
-            got = (yaw, pitch) if cover > 0.5 or my is None else (my, mp)
+            if cover > 0.5:
+                got = (yaw, pitch)
+            elif my is None or n < MIN_INLIERS:
+                # nothing to measure against (water, sky): assume the usual shortfall
+                got = (yaw * ASSUMED_GAIN, pitch * ASSUMED_GAIN)
+            else:
+                got = (my, mp)
             y0, p0 = self.yaw, self.pitch
             self.yaw, self.pitch = y0 + got[0], p0 + got[1]
             if self.mem is not None:
@@ -122,7 +145,7 @@ class Episode:
                                      chunk=self.s.chunk_id - 1, direction=direction)
         self.records.append({"chunk": self.s.chunk_id - 1, "label": label,
                              "measured_yaw": my, "measured_pitch": mp, "inliers": n,
-                             "guide_coverage": round(cover, 2),
+                             "guide_coverage": round(cover, 2), "reloc": reloc,
                              "est_yaw": round(self.yaw, 1), "est_pitch": round(self.pitch, 1)})
         return got
 
