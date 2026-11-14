@@ -32,9 +32,11 @@ from stepper import FPS, LingBotStepper  # noqa: E402
 def hot_reload(st):
     """Pick up edited adapter code without reloading the model weights."""
     import importlib
-    for m in (odometry, panorama, director, stepper_mod, episode):
+    import sdpa_shim
+    for m in (sdpa_shim, odometry, panorama, director, stepper_mod, episode):
         importlib.reload(m)
     st.__class__ = stepper_mod.LingBotStepper
+    st.used_sdpa_shim = sdpa_shim.install(force=True)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--repo", required=True)
@@ -82,11 +84,11 @@ def run_job(stepper, model, job, log):
                 tl = director.Timeline.load(os.path.join(tdir, task_id + ".json"))
             t0 = time.time()
             ep = episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
-                         log=lambda *x: None, timeline=tl,
+                         log=lambda *x: None, timeline=tl, anchor=job.get("anchor", 0),
                          guide_from=job.get("guide_from", 1), guide_hard=bool(job.get("guide_hard", 1)))
             res = ep.run(case, img, seed=job.get("seed", 0))
             imageio.mimsave(os.path.join(d, "video.mp4"), stepper.video(), fps=FPS, quality=8)
-            res.update(directed=tl is not None, model=model, wall_seconds=round(time.time() - t0, 1),
+            res.update(directed=tl is not None, anchored=bool(ep.anchor), model=model, wall_seconds=round(time.time() - t0, 1),
                        prompt=case["prompt"], action=case["action"],
                        peak_vram_gb=round(torch.cuda.max_memory_allocated() / 2**30, 1))
             json.dump(res, open(os.path.join(d, "result.json"), "w"), indent=1, ensure_ascii=False)

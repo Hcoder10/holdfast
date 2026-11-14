@@ -21,7 +21,7 @@ import re
 import numpy as np
 
 from odometry import intrinsics_matrix, relative_rotation
-from panorama import RotationMemory
+from panorama import RotationMemory, start_footprint
 from stepper import CHUNK, FPS, rel_pose
 
 ALLOWED_CASE_FIELDS = ("task_id", "category", "prompt", "image_path", "image_caption",
@@ -71,8 +71,11 @@ def _translate(kind, speed):
 
 class Episode:
     def __init__(self, stepper, mode="closed", speed=1.0, wait_chunks=None, log=print,
-                 guide_from=1, guide_hard=True, timeline=None):
+                 guide_from=1, guide_hard=True, timeline=None, anchor=False):
         self.timeline = timeline
+        # anchor: bind the subject's text to the starting view's footprint through
+        # cross-attention instead of swapping the whole prompt when facing away
+        self.anchor = bool(anchor and timeline is not None and timeline.spec.get("away_prompt"))
         self.s, self.mode, self.speed, self.log = stepper, mode, speed, log
         self.wait_chunks, self.guide_from, self.guide_hard = wait_chunks, guide_from, guide_hard
         self.records, self.frames = [], []
@@ -118,8 +121,16 @@ class Episode:
             stage = self.timeline.stage_at(t)
             # heading at the middle of the chunk about to be generated
             prompt = self.timeline.prompt_at(t, self.yaw + yaw / 2, self.pitch + pitch / 2)
+        region = None
+        if self.anchor and move is None:
+            self.s.set_regional(self.timeline.spec["away_prompt"], stage["prompt"])
+            prompt = None
+            region = np.stack([start_footprint(self.K, self.s.w, self.s.h,
+                                               self.yaw + yaw * (j + 1) / CHUNK,
+                                               self.pitch + pitch * (j + 1) / CHUNK)
+                               for j in range(CHUNK)])
         new = self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
-                          guide_hard=self.guide_hard)
+                          guide_hard=self.guide_hard, region=region)
         prev = self.frames[-1] if self.frames else new[0]
         my, mp, n = relative_rotation(prev, new[-1], self.K)
         cover = self.s.last_guide_coverage if guide is not None else 0.0
@@ -213,6 +224,8 @@ class Episode:
         s = self.s
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
+        if self.anchor:
+            s.set_regional(self.timeline.spec["away_prompt"], first_prompt)
         fx, fy, cx, cy = s.intrinsics_480
         k = s.w / 832
         self.K = intrinsics_matrix(fx * k, fy * k, s.w / 2, s.h / 2)

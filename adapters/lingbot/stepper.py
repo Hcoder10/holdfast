@@ -19,6 +19,7 @@ import os
 import sys
 
 import numpy as np
+import sdpa_shim
 import torch
 import torchvision.transforms.functional as TF
 from einops import rearrange
@@ -56,8 +57,7 @@ class LingBotStepper:
         import wan.modules.model_fast  # noqa: F401
         from wan.configs import WAN_CONFIGS
         from wan.utils import cam_utils
-        import sdpa_shim
-        self.used_sdpa_shim = sdpa_shim.install()
+        self.used_sdpa_shim = sdpa_shim.install(force=True)
         self.cam = cam_utils
         self.cfg = WAN_CONFIGS[task]
         self.max_area = max_area
@@ -83,6 +83,7 @@ class LingBotStepper:
         """Switch the text condition. Takes effect from the next step."""
         if prompt == getattr(self, "prompt", None):
             return
+        self.regional = None
         p, m = self.pipe, self.pipe.model.config
         self.prompt = prompt
         self.context = self._encode(prompt)
@@ -91,6 +92,39 @@ class LingBotStepper:
             shape=[1, 512, m.num_heads, m.dim // m.num_heads],
             dtype=p.pipe_dtype, device=self.device)
         self.cross_first = True
+
+    def set_regional(self, global_prompt, subject_prompt):
+        """World-anchored text. Two descriptions are encoded separately and placed
+        side by side in the text context: `global_prompt` (the surroundings; every
+        image token may attend to it) and `subject_prompt` (what the starting view
+        shows; only image tokens that fall inside the starting view's footprint may
+        attend to it, see `step(region=...)`). Where the footprint is off screen the
+        subject's words reach no token, so nothing can paint a second copy; as the
+        footprint slides back into frame the subject is drawn only inside it."""
+        if (global_prompt, subject_prompt) == getattr(self, "regional", None):
+            return
+        p, m = self.pipe, self.pipe.model.config
+        g, s = self._encode(global_prompt)[0], self._encode(subject_prompt)[0]
+        assert g.shape[0] + s.shape[0] <= 512
+        self.regional = (global_prompt, subject_prompt)
+        self.subject_span = (g.shape[0], g.shape[0] + s.shape[0])
+        self.prompt = "REGIONAL: " + global_prompt + " || " + subject_prompt
+        self.context = [torch.cat([g, s], dim=0)]
+        self.cross_cache = p._initialize_crossattn_cache(
+            num_layers=m.num_layers,
+            shape=[1, 512, m.num_heads, m.dim // m.num_heads],
+            dtype=p.pipe_dtype, device=self.device)
+        self.cross_first = True
+
+    def _cross_mask(self, region):
+        """[3*tokens_per_frame, 512] bool from a [3, H, W] footprint (1 = inside)."""
+        th, tw = self.lat_h // 2, self.lat_w // 2
+        r = torch.as_tensor(region, dtype=torch.float32, device=self.device)[None]
+        r = torch.nn.functional.adaptive_avg_pool2d(r, (th, tw))[0] > 0.5   # [3, th, tw]
+        mask = torch.ones(CHUNK * th * tw, 512, dtype=torch.bool, device=self.device)
+        a, b = self.subject_span
+        mask[:, a:b] = r.reshape(-1, 1)
+        return mask
 
     # ----------------------------------------------------------------- reset
     @torch.no_grad()
@@ -132,6 +166,7 @@ class LingBotStepper:
             shape=[1, self.kv_size, m.num_heads, m.dim // m.num_heads],
             dtype=p.pipe_dtype, device=self.device)
         self.prompt = None
+        self.regional = None
         self.set_prompt(prompt)
         self.gen = torch.Generator(device=self.device)
         self.gen.manual_seed(seed)
@@ -193,7 +228,8 @@ class LingBotStepper:
 
     # ------------------------------------------------------------------ step
     @torch.no_grad()
-    def step(self, rel, prompt=None, decode=True, guide=None, guide_from=1, guide_hard=True):
+    def step(self, rel, prompt=None, decode=True, guide=None, guide_from=1, guide_hard=True,
+             region=None):
         """Generate one chunk.
 
         rel: three 4x4 frame-to-frame relative camera poses (see `rel_pose`).
@@ -232,6 +268,27 @@ class LingBotStepper:
         }
         latent = torch.randn(16, CHUNK, self.lat_h, self.lat_w, dtype=torch.float32,
                              generator=self.gen, device=self.device)
+        # region: uint8/bool [3, H, W], the starting view's footprint in each latent
+        # frame of this chunk. Only used with set_regional().
+        sdpa_shim.CROSS_MASK = None
+        if getattr(self, "regional", None) and region is not None:
+            sdpa_shim.CROSS_MASK = self._cross_mask(region)
+        try:
+            x0 = self._denoise(latent, kwargs, g, guide_from, guide_hard)
+        finally:
+            sdpa_shim.CROSS_MASK = None
+        self.latents.append(x0.float())
+        self.rel_poses.append(rel)
+        self.prompts.append(self.prompt)
+        self.chunk_id += 1
+        if not decode:
+            return None
+        frames = self._decode_tail()
+        self.shown = frames if self.chunk_id == 1 else np.concatenate([self.shown[-12:], frames])
+        return frames
+
+    def _denoise(self, latent, kwargs, g, guide_from, guide_hard):
+        p = self.pipe
         with torch.amp.autocast("cuda", dtype=p.param_dtype):
             for i, t in enumerate(self.timesteps):
                 if g is not None and i >= guide_from:
@@ -253,15 +310,7 @@ class LingBotStepper:
             # write the clean chunk into the attention cache
             p.model(x=[x0], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
                     cross_attn_first_call=False, **kwargs)
-        self.latents.append(x0.float())
-        self.rel_poses.append(rel)
-        self.prompts.append(self.prompt)
-        self.chunk_id += 1
-        if not decode:
-            return None
-        frames = self._decode_tail()
-        self.shown = frames if self.chunk_id == 1 else np.concatenate([self.shown[-12:], frames])
-        return frames
+        return x0
 
     # ---------------------------------------------------------------- decode
     @staticmethod
