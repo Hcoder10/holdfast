@@ -38,10 +38,13 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         # the planner-chosen program on the 95 held-out cases, against the arms already judged there
         "v2": {"baseline": "base95", "final": "final2"},
         # the planner arm of the 21-case test, run again after a bug left it switched off the first time
-        "sw21b": {"final": "sweep21b:lingbot2_14b_open_planner"}}[SET]
+        "sw21b": {"final": "sweep21b:lingbot2_14b_open_planner"},
+        # shadow world on 11 turn-and-return cases: base, static pin to the first frame ("alive" slot), shadow world
+        "sw22": {"baseline": "sweep22:lingbot2_14b_open_base", "alive": "sweep22:lingbot2_14b_open_first",
+                 "final": "sweep22:lingbot2_14b_open_shadow"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 
@@ -165,6 +168,8 @@ def tally():
              "alive": "Alive write always on"}
     if SET == "sw21":
         names.update(baseline="Cohesive base", final="Planner-chosen program")
+    if SET == "sw22":
+        names.update(baseline="Base", alive="Pin to the first frame on return", final="Shadow world")
     if SET == "v2":
         names.update(final="Planner-chosen program")
     for a in ARMS:
