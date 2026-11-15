@@ -25,7 +25,7 @@ import requests
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 API = "https://api.past.dev/api/v1"
 LOG = os.path.join(ROOT, "results", "memory_log.jsonl")
-AGENTS = ("controller", "critic", "cartographer", "director", "composer", "proposer", "experimenter")
+AGENTS = ("controller", "critic", "planner", "cartographer", "director", "composer", "proposer", "experimenter")
 
 # Read boundaries. Every write carries one audience; a recall returns only what the reading
 # identity's audiences reach.
@@ -36,7 +36,7 @@ AGENTS = ("controller", "critic", "cartographer", "director", "composer", "propo
 # the scene agents never see programs or lab notes; the lab never reaches a running episode.
 AUDIENCES = {
     "wh-world": ("cartographer", "director", "composer", "controller"),
-    "wh-programs": ("controller", "critic"),
+    "wh-programs": ("controller", "critic", "planner"),
     "wh-lab": ("proposer", "experimenter"),
 }
 KIND_AUDIENCE = {"fact": "wh-world", "state": "wh-world", "view": "wh-world",

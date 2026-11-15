@@ -707,6 +707,15 @@ class Episode:
     def run(self, case, image, seed=0):
         s = self.s
         self.caption = case["image_caption"]
+        self.plan = None
+        if self.cfg.get("planner"):
+            # launch-time decision model: a small LLM picks the state program for this task and scene
+            import planner
+            pc = self.cfg["planner"] if isinstance(self.cfg["planner"], dict) else {}
+            self.plan = planner.decide({k: case[k] for k in ALLOWED_CASE_FIELDS if k in case}, image,
+                                       use_memory=not pc.get("nomem"), model=pc.get("model"))
+            self.cfg = dict({k: v for k, v in self.cfg.items() if k not in ("register", "steer", "anchor_stats")},
+                            **self.plan["cfg"])
         if self.cfg.get("steer") or self.cfg.get("record_acts"):
             probe = s.enable_probe()
             probe.set_steer({})
@@ -890,6 +899,7 @@ class Episode:
                 "cfg": self.cfg, "brief": self.brief,
                 "cap_gate": None if not getattr(self, "cap_gate", None) else dict(
                     self.cap_gate, bias_hits=__import__("sdpa_shim").BIAS_HITS),
+                "plan": None if not self.plan else {k: self.plan[k] for k in ("decision", "why", "recalled")},
                 "bank": None if not getattr(self, "bank", None) else {
                     "views": len(self.bank["views"]), "superseded": self.bank["superseded"],
                     "reads": self.bank["reads"]},
