@@ -325,3 +325,24 @@ noise on single cases; the result is "no evidence of a gain", not a measured har
 The critic's per-object check is not usable as a signal: it reported every object "same" or "changed plausibly" and
 the view "returned" on all 11 cases, including seven the judge scored 1.0. A second attempt driven by it would have
 nothing to act on, so that step was not run.
+
+### Does the recorded hidden state know when a rollout is bad? (09:35, offline, no generation)
+
+341 judged development episodes with recorded activations, 80 cases, every case run more than once. Predictors
+trained with cases held out (5 folds by case): seven latent reads (motion mean, min, spread; continuity min, mean;
+activation drift first to last; length), the mean residual activations at eight blocks (PCA 32), and both.
+
+| predictor | correlation with the judge | picks the better of two reruns (238 pairs, gap >= 1) | gain from picking its favourite rerun |
+|---|---|---|---|
+| latent reads | -0.07 | 0.44 | -0.12 |
+| mean activations | -0.03 | 0.41 | -0.25 |
+| both | -0.12 | 0.41 | -0.28 |
+
+Chance is 0.50. A perfect picker would gain +0.92 over the average rerun of a case, so the headroom from choosing
+among reruns is the largest lever measured tonight, and the pooled hidden state cannot find it: neither frozen-ness,
+hard cuts nor drift, as read from latents and pooled activations, tracks what the judge scores. (Limits: one
+judging per video with about half a point of repeat noise; activations pooled over space, so anything spatial is lost.)
+
+Checks requested on the two negative results: the noise-flow write ran on every commanded chunk (7 of 7, 12 of 12
+logged); the ledger pinned 0.36-0.90 of the frame and the judge's reason on its dropped cases is that the subject
+left unpinned stayed frozen ("the box failed to evolve"), i.e. the premise failed, not the code.
