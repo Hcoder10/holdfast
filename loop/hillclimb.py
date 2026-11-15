@@ -180,7 +180,31 @@ def run_trial(tid, cfg, cases):
     inputs = ROOT / "runs" / f"jin_{run}"
     inputs.mkdir(exist_ok=True)
     sh(["modal", "volume", "get", "worldhold-runs", f"judge/{folder}", str(inputs) + "/"], timeout=1800)
-    return judge_dir(inputs, run)
+    # A video identical to the baseline's is a zero difference by construction. The judge
+    # scores identical inputs up to 2 points apart (results/hillclimb_log.md), so judging
+    # it again would add noise and cost. Such cases are set aside and take the baseline score.
+    same, base_now = {}, json.loads(base_file.read_text()) if base_file.exists() else {}
+    aside = ROOT / "runs" / f"jin_{run}_same"
+    for case in sorted((inputs / f"lingbot2_14b_{cfg['mode']}").glob("*")):
+        ref = ROOT / "runs" / "jin_half1" / "lingbot2_14b_open" / case.name / "sheets"
+        if case.name in base_now and ref.is_dir() and sheet_hash(case / "sheets") == sheet_hash(ref):
+            aside.mkdir(exist_ok=True)
+            case.rename(aside / case.name)
+            b = base_now[case.name]
+            same[case.name] = (b[0], "identical video to the baseline; not re-judged", b[2] if len(b) > 2 else None)
+    if same:
+        say(f"trial {tid}: {len(same)} videos identical to the baseline, not re-judged: {sorted(same)}")
+    scores = judge_dir(inputs, run)
+    scores.update(same)
+    return scores
+
+
+def sheet_hash(d):
+    import hashlib
+    h = hashlib.md5()
+    for f in sorted(p for p in Path(d).rglob("*") if p.is_file()):
+        h.update(f.read_bytes())
+    return h.hexdigest()
 
 
 def compare(scores, base):
