@@ -255,6 +255,15 @@ class Episode:
             b["home"] = (self.ayaw, self.apitch, tuple(self.pos))
             b["armed"], b["shadow_n"] = False, 0
             b["forks"] += 1
+            if b.get("evolve_text"):
+                # Only the unseen copy is told how the scene moves on (the Exa-derived sentence, as a
+                # register at full strength). Any abruptness that causes happens where nobody is looking;
+                # the visible rollout keeps its prompt and only receives the copy's frame on return.
+                main0 = s.export()
+                s.load(b["shadow"])
+                s.set_register(s.prompt, b["evolve_text"], b["evolve_gain"])
+                b["shadow"] = s.export()
+                s.load(main0)
         hy, hp, hpos = b["home"]
         off = max(abs((self.ayaw + yaw - hy + 180.0) % 360.0 - 180.0), abs(self.apitch + pitch - hp))
         dist = float(np.hypot(tpos[0] - hpos[0], tpos[1] - hpos[1]))
@@ -263,12 +272,16 @@ class Episode:
             b["dropped"] += 1
             return
         main = s.export()
+        g_main, gs_main = s.register_gain, s.register_gains
         s.load(b["shadow"])
         try:
+            if b.get("evolve_text"):
+                s.register_gain, s.register_gains = b["evolve_gain"], None
             s.step([rel_pose()] * CHUNK, decode=False)        # one more chunk of the unseen view
             b["shadow"] = s.export()
         finally:
             s.load(main)
+            s.register_gain, s.register_gains = g_main, gs_main
         b["shadow_n"] += 1
         b["shadow_total"] += 1
         if off > b["tol"] + 5.0:
@@ -854,7 +867,16 @@ class Episode:
                          "via": bc.get("via", "sink"), "armed": False,
                          "pos_tol": float(bc.get("pos_tol", 0.6)), "first": s.cond_lat[:, 0].clone(),
                          "shadow_on": bool(bc.get("shadow")), "shadow": None, "home": None, "shadow_n": 0,
-                         "max_shadow": int(bc.get("max_shadow", 28)), "forks": 0, "dropped": 0, "shadow_total": 0}
+                         "max_shadow": int(bc.get("max_shadow", 28)), "forks": 0, "dropped": 0, "shadow_total": 0,
+                         "evolve_text": None, "evolve_gain": float((bc.get("evolve") or {}).get("gain", 8.0)),
+                         "evolve_info": None}
+            if bc.get("evolve") and (case.get("perspective") or "").strip().lower() != "third person":
+                import outsight
+                try:
+                    ei = outsight.make(dict(case, image_caption=self.caption0), image)
+                    self.bank["evolve_text"], self.bank["evolve_info"] = (ei.get("text") or None), ei
+                except Exception as e:
+                    self.bank["evolve_info"] = {"error": repr(e)[:120]}
         self.ledger, self.pin_mask = None, None
         lc = self.cfg.get("ledger")
         first_person_motion = (case.get("perspective") or "").strip().lower() != "third person" and \
@@ -977,6 +999,7 @@ class Episode:
                 "bank": None if not getattr(self, "bank", None) else {
                     "views": len(self.bank["views"]), "superseded": self.bank["superseded"],
                     "reads": self.bank["reads"], "forks": self.bank["forks"], "dropped": self.bank["dropped"],
+                    "evolve_text": self.bank.get("evolve_text"), "evolve_info": self.bank.get("evolve_info"),
                     "unseen_chunks_run": self.bank["shadow_total"]},
                 "ret": None if not getattr(self, "ret", None) else {
                     "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
