@@ -1,0 +1,136 @@
+{
+ "episodes": 341,
+ "layers": [
+  4,
+  9,
+  14,
+  19,
+  24,
+  29,
+  34,
+  39
+ ],
+ "typical_norm": [
+  38.82,
+  29.28,
+  31.93,
+  27.4,
+  24.22,
+  28.01,
+  30.53,
+  67.53
+ ],
+ "directions": {
+  "score_GC": {
+   "pairs": 14,
+   "cases": [
+    "GC021",
+    "GC048",
+    "GC047",
+    "GC042",
+    "GC015",
+    "GC031",
+    "GC033",
+    "GC023",
+    "GC039",
+    "GC010",
+    "GC040",
+    "GC025",
+    "GC002",
+    "GC022"
+   ],
+   "heldout_sign_agreement_by_layer": [
+    0.67,
+    0.64,
+    0.63,
+    0.63,
+    0.63,
+    0.61,
+    0.64,
+    0.7
+   ]
+  },
+  "score_IF": {
+   "pairs": 5,
+   "cases": [
+    "IF004",
+    "IF007",
+    "IF006",
+    "IF013",
+    "IF016"
+   ],
+   "heldout_sign_agreement_by_layer": [
+    0.82,
+    0.88,
+    0.88,
+    0.88,
+    0.88,
+    0.88,
+    0.88,
+    0.8
+   ]
+  },
+  "score_IE": {
+   "pairs": 7,
+   "cases": [
+    "OE072",
+    "OE005",
+    "OE063",
+    "OE008",
+    "OE010",
+    "OE073",
+    "OE002"
+   ],
+   "heldout_sign_agreement_by_layer": [
+    0.22,
+    0.42,
+    0.3,
+    0.34,
+    0.32,
+    0.38,
+    0.41,
+    0.33
+   ]
+  },
+  "score_OE": {
+   "pairs": 9,
+   "cases": [
+    "OE036",
+    "OE053",
+    "OE045",
+    "OE052",
+    "OE046",
+    "OE029",
+    "OE048",
+    "OE070",
+    "OE015"
+   ],
+   "heldout_sign_agreement_by_layer": [
+    0.53,
+    0.54,
+    0.54,
+    0.53,
+    0.55,
+    0.53,
+    0.54,
+    0.58
+   ]
+  },
+  "alive": {
+   "chunks_high": 2296,
+   "chunks_low": 2297,
+   "thresholds": [
+    0.93,
+    1.048
+   ]
+  },
+  "stable": {
+   "chunks_high": 2296,
+   "chunks_low": 2296,
+   "thresholds": [
+    0.723,
+    0.899
+   ]
+  }
+ }
+}
