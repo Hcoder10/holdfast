@@ -27,6 +27,36 @@ API = "https://api.past.dev/api/v1"
 LOG = os.path.join(ROOT, "results", "memory_log.jsonl")
 AGENTS = ("controller", "critic", "cartographer", "director", "composer", "proposer", "experimenter")
 
+# Read boundaries. Every write carries one audience; a recall returns only what the reading
+# identity's audiences reach.
+#   wh-world     what the scene agents share: sourced facts and the state on return
+#   wh-programs  what worked on the model: calibration, winning state programs, defects
+#   wh-lab       the development loop's hypotheses and judged lessons
+# The controller reads the world layer (it applies the sentence) and owns the programs layer;
+# the scene agents never see programs or lab notes; the lab never reaches a running episode.
+AUDIENCES = {
+    "wh-world": ("cartographer", "director", "composer", "controller"),
+    "wh-programs": ("controller", "critic"),
+    "wh-lab": ("proposer", "experimenter"),
+}
+KIND_AUDIENCE = {"fact": "wh-world", "state": "wh-world", "view": "wh-world",
+                 "calibration": "wh-programs", "program": "wh-programs", "defect": "wh-programs",
+                 "hypothesis": "wh-lab", "lesson": "wh-lab", "result": "wh-lab"}
+_AUD_READY = False
+
+
+def setup_audiences():
+    """Create or replace the three audiences (idempotent). Returns the API's records."""
+    global _AUD_READY
+    out = {}
+    for slug, members in AUDIENCES.items():
+        r = requests.put(f"{API}/audiences/{slug}", headers=_headers(), timeout=30,
+                         json={"kind": "fixed", "name": slug, "identities": list(members)})
+        r.raise_for_status()
+        out[slug] = r.json()
+    _AUD_READY = True
+    return out
+
 
 def _key():
     k = os.environ.get("PAST_API_KEY")
@@ -52,20 +82,28 @@ def _log(entry):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def write(agent, kind, text, meta=None, id=None, wait=False):
-    """Store one fact. `agent` is the author; `kind` is lesson | calibration | fact | state."""
+def write(agent, kind, text, meta=None, id=None, wait=False, timestamp=None):
+    """Store one fact. `agent` is the author; `kind` selects the audience (KIND_AUDIENCE)."""
     assert agent in AGENTS, agent
+    audience = KIND_AUDIENCE.get(kind, "wh-lab")
+    if not _AUD_READY:
+        try:
+            setup_audiences()
+        except Exception:
+            audience = None      # audiences unavailable: fall back to project-visible, and say so in the log
     meta = dict(meta or {}, author=agent, kind=kind)
     # past.dev does not return the author on recall, so it is also in the text
     content = f"[{kind} from {agent}] {text}"
     body = {"id": id or f"{agent}-{kind}-{hashlib.sha1(content.encode()).hexdigest()[:12]}",
-            "content": content, "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "content": content, "timestamp": timestamp or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "label": f"{agent}/{kind}", "identity": agent, "metadata": meta}
+    if audience:
+        body["audience"] = audience
     r = requests.post(API + "/ingest", headers=_headers(), json=body, timeout=30)
     r.raise_for_status()
     out = r.json()
     _log({"op": "write", "agent": agent, "kind": kind, "text": text, "meta": meta,
-          "id": body["id"], "status": out.get("status")})
+          "id": body["id"], "status": out.get("status"), "audience": audience})
     if wait and out.get("ingestionId"):
         for _ in range(60):
             s = requests.get(API + "/ingest/" + out["ingestionId"], headers=_headers(), timeout=30).json()
@@ -90,6 +128,8 @@ def recall(agent, query, limit=8):
         hits.append({"text": res.get("content"), "author": author,
                      "kind": meta.get("kind") or (label.split("/")[1] if "/" in label else None),
                      "memory_kind": (res.get("artifact") or {}).get("kind"),
+                     "occurred_at": res.get("occurredAt"),
+                     "superseded_at": (res.get("artifact") or {}).get("supersededAt"),
                      "source_id": src.get("sourceId"), "excerpts": src.get("excerpts")})
     _log({"op": "recall", "agent": agent, "query": query, "n": len(hits),
           "authors": sorted({h["author"] for h in hits if h["author"]}),

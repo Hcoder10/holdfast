@@ -129,48 +129,75 @@ Every write records how many times it was actually applied, so a silent no-op sh
 
 ### Agents
 
-Seven identities read and write through one module, `tools/mem.py`; every call is appended to
-`results/memory_log.jsonl` with its author.
+Seven identities read and write through one module, `tools/mem.py`. Every write carries its author as
+`identity` and one audience; every recall sends the reader's identity. Each call is appended to
+`results/memory_log.jsonl`.
 
-| Agent | Runs | Writes | Reads |
-|---|---|---|---|
-| controller | In the episode (`episode.py`, `repair.py`) | Measured turn gain per model; the winning state program per scene | Turn gain; the program that won on the most similar scene |
-| cartographer | At step 0 (`outsight.py`, `brief.py`) | The Exa question, answer and source URL for how fast a scene's process advances | |
-| director | At step 0 | The sentence for the state on return | |
-| composer | At step 0 of a later episode | | The stored sentence for this scene, instead of asking Exa again |
-| critic | After a rollout (`repair.py`) | The worst defect it saw and the program that produced it | |
-| proposer, experimenter | The development loop (`loop/hillclimb.py`) | Each trial's hypothesis; its judged outcome and lesson | Past lessons before proposing |
+| Agent (identity) | Runs | Writes (audience) | Reads | Audiences it is in |
+|---|---|---|---|---|
+| `controller` | In the episode (`episode.py`, `repair.py`) | Measured turn gain; the winning state program per scene (`wh-programs`) | Turn gain; the program that won on the most similar scene; the critic's defects; the director's sentence it applies | `wh-world`, `wh-programs` |
+| `cartographer` | Step 0 (`outsight.py`, `brief.py`) | The Exa question, answer and source URL for how fast a scene's process advances (`wh-world`) | | `wh-world` |
+| `director` | Step 0 | The sentence for the state on return, derived from the cartographer's fact (`wh-world`) | | `wh-world` |
+| `composer` | Step 0 of a later episode | | The director's stored sentence for this scene, instead of asking Exa again | `wh-world` |
+| `critic` | After a rollout (`repair.py`) | The worst defect it saw and the program that produced it (`wh-programs`) | | `wh-programs` |
+| `proposer`, `experimenter` | The development loop (`loop/hillclimb.py`) | Each trial's hypothesis; its judged outcome and lesson (`wh-lab`) | Past lessons before proposing | `wh-lab` |
+
+Reads across agents: the composer uses the director's sentence; the controller uses the critic's defects
+and its own earlier programs; the proposer uses the experimenter's lessons.
 
 ### Layers
 
-- **Calibration** (controller): numbers about the model that outlive an episode, such as the ratio of
-  achieved to commanded turn.
-- **World facts** (cartographer): sourced statements about how real processes behave, each with its
-  Exa URL. Kept apart from the sentences derived from them so a fact can be reused.
-- **Scene state** (director, composer): what a given scene should look like when the camera returns.
-- **Programs and defects** (controller, critic): which state program worked where, and what failed.
-- **Experiment lessons** (proposer, experimenter): hypotheses and outcomes of judged trials.
+Three read boundaries, one audience each (`AUDIENCES` in `tools/mem.py`):
 
-Per-frame state (headings, latents, the view bank) stays local: it is large, changes every chunk and
-is useless to another episode.
+- **`wh-world`, semantic, about scenes**: sourced facts about how real processes behave (each with its
+  Exa URL) and the sentence derived from each. Facts and sentences are separate records so a fact can
+  be reused and a sentence can be replaced without losing its source. Shared by the scene agents and
+  the controller that applies the sentence.
+- **`wh-programs`, procedural, about the model**: calibration (achieved over commanded turn), which
+  state program worked on which kind of scene, and the defects the critic saw. Only the controller
+  and critic are in it: a scene agent has no use for "gain 8 worked", and seeing it would invite it
+  to write captions around the mechanism.
+- **`wh-lab`, episodic, about our own experiments**: hypotheses and judged outcomes. Kept out of
+  running episodes on purpose, so nothing learned from the judge can leak into generation.
+
+Not in past.dev: working state (headings, latents, the view bank) stays in the process. It is large,
+changes every 0.75 s and means nothing to another episode. Every trial and sweep is also written to
+`results/hillclimb_log.md` for people to read.
+
+Expected before running: the world layer would save Exa calls on repeated scenes and make the
+return sentence consistent across runs; the programs layer would let a new episode start from a gain
+that worked.
 
 ### Results
 
-- The return register is the path by which a stored fact changes generation: Exa answer, sentence,
-  cross-attention register, gain ramp on return. On two of four cases it changed the returned view
-  from a replaced or duplicated subject to the original one, moved on.
-- The repair loop's recall changes the first attempt's register gain for a new scene.
+- **A stored fact changes generation.** Cartographer's Exa fact, director's sentence, composer's
+  recall, then the sentence enters the model as a cross-attention register that ramps in when the
+  camera returns. On two of four cases this changed the returned view from a replaced or duplicated
+  subject to the original one, moved on (frames; see The state program).
+- **Read boundaries hold, and supersession shows up** (`tools/mem_demo.py`, output in
+  `results/pastdev_demo.txt`). The controller recorded the register gain for third-person cases as 4
+  at 00:45 and as 8 at 01:10, which is what happened. Asked the same question:
+  the controller gets both records, the extracted claim "gain 4 (exactly)" carrying
+  `supersededAt: 2026-11-15T09:10:00Z`, the critic's defect about gain 16, and for each the source id
+  and the excerpt it rests on; the composer (`wh-world` only) and the proposer (`wh-lab` only) get
+  none of those sources.
+- **The repair loop reads a winning program back** as the first attempt for a similar scene.
 
 ### Caveats
 
-- Recall has no author filter, so the author is also written into the text.
-- Read boundaries are by identity only; no audiences are configured, so every agent can read every layer.
-- We have not shown a later episode scoring better because of a recalled program: the loop has run on
-  a handful of cases with an almost empty memory.
-- Superseding is implemented locally for the view bank (a newer view of the same heading replaces the
-  old one) but is not exercised through past.dev's own `supersededAt`.
-- Some early writes in the proposer and experimenter roles were made by the orchestrating model
-  acting in that role, not by a separate process.
+- Audiences were added late. Records written before 03:20 on 15 November carry no audience and are
+  project-visible to every identity; only later writes are scoped.
+- Recall does not return the author, so the author is also written into the text and the source label.
+- We have not shown a later episode scoring better because of a recalled program or sentence: the
+  loop ran on a handful of cases with an almost empty memory, and the reported benchmark run does
+  not use the repair loop. Recalled sentences make runs repeatable; that is all we can claim.
+- Supersession is shown on one fact that we wrote twice on purpose (truthfully). In episodes, a
+  re-run of a scene overwrites nothing; it adds a record.
+- Deleting a source is not wired in. A wrong fact written by the cartographer stays until removed by hand.
+- Early writes in the proposer and experimenter roles were made by the orchestrating model acting in
+  that role, not by a separate process.
+- The agents are roles within one program run, sharing one API key; identity is declared by the
+  caller, not authenticated per agent.
 
 ## Exa
 

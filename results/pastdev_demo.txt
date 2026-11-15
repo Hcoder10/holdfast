@@ -1,0 +1,48 @@
+== audiences ==
+wh-world members: ['cartographer', 'composer', 'controller', 'director'] | memberCount 4
+wh-programs members: ['controller', 'critic'] | memberCount 2
+wh-lab members: ['experimenter', 'proposer'] | memberCount 2
+
+== writes ==
+controller program -> wh-programs | wh-demo-gain-0045 | queued
+controller program -> wh-programs | wh-demo-gain-0110 | queued
+critic defect -> wh-programs | wh-demo-defect-0050 | queued
+experimenter lesson -> wh-lab | wh-demo-lesson-2320 | queued
+
+== the same question, read as three identities ==
+
+[controller] audiences: ['wh-world', 'wh-programs']; 12 results, 11 from this demo's sources
+  - [program from controller] Register gain for third-person interaction cases on lingbot2_14b: 8. Changed from 4 after validation on seven further cases:
+    author: controller | occurredAt: 2026-11-15T09:10:00Z | supersededAt: None | source: wh-demo-gain-0110
+  - [program from controller] Register gain for third-person interaction cases on lingbot2_14b: 4. Chosen after the first gain sweep (six cases): gain 4 a
+    author: controller | occurredAt: 2026-11-15T08:45:00Z | supersededAt: None | source: wh-demo-gain-0045
+  - controller: lingbot2_14b gain for third-person interaction cases: gain 4 (exactly).
+    author: controller | occurredAt: 2026-11-15T08:45:00Z | supersededAt: 2026-11-15T09:10:00Z | source: wh-demo-gain-0045
+    excerpt: [program from controller] Register gain for third-person interaction cases on lingbot2_14b: 4. Chosen after the first gain sweep (six cases): gain 4 a
+  - [defect from critic] At register gain 16 on a first-person driving case the car interior disappears; the register is limited to third-person cases.
+    author: critic | occurredAt: 2026-11-15T08:50:00Z | supersededAt: None | source: wh-demo-defect-0050
+  - controller: lingbot2_14b registered gain for third-person interaction cases: 8.
+    author: controller | occurredAt: 2026-11-15T09:10:00Z | supersededAt: None | source: wh-demo-gain-0110
+    excerpt: [program from controller] Register gain for third-person interaction cases on lingbot2_14b: 8. Changed from 4 after validation on seven further cases:
+  - controller: The controller chose gain 4 for third-person interaction cases on lingbot2_14b after the first gain sweep (decision).
+    author: controller | occurredAt: 2026-11-15T08:45:00Z | supersededAt: None | source: wh-demo-gain-0045
+    excerpt: [program from controller] Register gain for third-person interaction cases on lingbot2_14b: 4. Chosen after the first gain sweep (six cases): gain 4 a
+  - controller: third-person interaction cases on lingbot2_14b minimum gain that completes the requested action: gain 4 and above (at least).
+    author: controller | occurredAt: 2026-11-15T08:45:00Z | supersededAt: None | source: wh-demo-gain-0045
+    excerpt: [program from controller] Register gain for third-person interaction cases on lingbot2_14b: 4. Chosen after the first gain sweep (six cases): gain 4 a
+  - critic: The register is limited to third-person cases (forbidden, standing). Applies to register.
+    author: critic | occurredAt: 2026-11-15T08:50:00Z | supersededAt: None | source: wh-demo-defect-0050
+    excerpt: [defect from critic] At register gain 16 on a first-person driving case the car interior disappears; the register is limited to third-person cases.
+  - critic: At register gain 16 on a first-person driving case, the car interior disappears (problem). Because register gain 16 on a first-person driving 
+    author: critic | occurredAt: 2026-11-15T08:50:00Z | supersededAt: None | source: wh-demo-defect-0050
+    excerpt: [defect from critic] At register gain 16 on a first-person driving case the car interior disappears; the register is limited to third-person cases.
+  - critic: register gain: 16.
+    author: critic | occurredAt: 2026-11-15T08:50:00Z | supersededAt: None | source: wh-demo-defect-0050
+    excerpt: [defect from critic] At register gain 16 on a first-person driving case the car interior disappears; the register is limited to third-person cases.
+  - controller: Mentioned third-person interaction cases.
+    author: controller | occurredAt: 2026-11-15T09:10:00Z | supersededAt: None | source: wh-demo-gain-0110
+    excerpt: [program from controller] Register gain for third-person interaction cases on lingbot2_14b: 8. Changed from 4 after validation on seven further cases:
+
+[composer] audiences: ['wh-world']; 12 results, 0 from this demo's sources
+
+[proposer] audiences: ['wh-lab']; 12 results, 0 from this demo's sources
