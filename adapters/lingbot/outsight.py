@@ -46,6 +46,49 @@ do not describe a finished state; do not mention any camera. Reply with one JSON
 {"action": "..."}"""
 
 
+WRITE_STAGES = """A video model will continue this scene for 30 seconds with a still camera. Write THREE sentences
+(16-28 words each) describing the same activity at three successive moments, so that each one shows visibly MORE
+accumulated progress than the one before: "early" (the first ten seconds), "middle", "late" (the last ten seconds).
+Rules: present continuous, active verbs; name the subject by its distinguishing features in every sentence, the same
+individual each time; say concretely how far the process has got at that moment (how much is eaten, filled, cut,
+packed, how far along the path, how many done), using the sourced fact for a realistic pace; use only people and
+things already in the frame; no new characters; do not mention any camera. Reply with one JSON object and nothing
+else: {"early": "...", "middle": "...", "late": "..."}"""
+
+
+def stages(case, image, use_web=True, use_memory=True):
+    """A process timeline for a still-camera scene: three sentences, each further along than the last, paced by
+    what Exa says about how fast the activity really goes. One constant action sentence held at high gain makes
+    the model restart the same motion every chunk (judged: looping, no accumulated change); a timeline gives the
+    register something to advance through. {"stages": [early, middle, late], "doing", "question", "fact", "url"}."""
+    key = case["task_id"]
+    a = llm.ask_json(ASK_ACT, f"Caption: {case['image_caption']}", [image], max_tokens=300)
+    doing, question, answer, url = a.get("doing"), a.get("question"), None, None
+    if not doing or str(doing).lower() in ("nothing", "null", "none"):
+        return {"stages": [], "doing": None, "source": "no activity", "url": None, "question": None, "fact": None}
+    if question and use_web:
+        try:
+            res = exa_search.answer(question)
+            answer = res.get("answer")
+            url = (res.get("citations") or [{}])[0].get("url")
+            if use_memory:
+                mem.write("cartographer", "fact", f"{key} pace of the activity: {question} -> {str(answer)[:400]}",
+                          {"case": key, "url": url})
+        except Exception:
+            answer = None
+    w = llm.ask_json(WRITE_STAGES, f"Caption: {case['image_caption']}\nIn progress: {doing}\n"
+                     f"Sourced fact about how it proceeds: {answer or '(none)'}", [image], max_tokens=400)
+    st = [(w.get(k) or "").strip() for k in ("early", "middle", "late")]
+    st = st if all(st) else []
+    if st and use_memory:
+        try:
+            mem.write("director", "state", f"{key} process timeline: " + " | ".join(st), {"case": key, "url": url})
+        except Exception:
+            pass
+    return {"stages": st, "doing": doing, "question": question, "fact": None if answer is None else str(answer)[:300],
+            "url": url, "source": "exa+llm" if answer else "llm"}
+
+
 def action(case, image, use_web=True, use_memory=True):
     """The request for a still-camera scene: the benchmark says only "wait and observe", so what the subjects
     should be doing comes from the scene itself and from Exa (how the activity actually proceeds). Returned as

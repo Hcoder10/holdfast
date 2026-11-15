@@ -1,0 +1,103 @@
+{
+ "note": "Shadow-world program on all 171 cases. First-person cases were regenerated and judged with the shadow world (held-out half twice, development half twice); the rest keep their judged score under the pre-registered program. The shadow-world arm was designed after the held-out result of the pre-registered program was known.",
+ "cases": 171,
+ "shadow_cases": {
+  "held_out": 46,
+  "development": 48
+ },
+ "arms": {
+  "baseline": {
+   "GC": 2.348,
+   "IF": 2.053,
+   "IE": 2.297,
+   "OE": 1.683,
+   "overall": 2.095,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  },
+  "final": {
+   "GC": 2.448,
+   "IF": 2.298,
+   "IE": 2.57,
+   "OE": 1.936,
+   "overall": 2.313,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  },
+  "v2": {
+   "GC": 2.598,
+   "IF": 2.297,
+   "IE": 2.57,
+   "OE": 1.827,
+   "overall": 2.323,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  }
+ },
+ "v2_minus_baseline": {
+  "n": 171,
+  "by_dim": {
+   "GC": 0.25,
+   "IF": 0.244,
+   "IE": 0.273,
+   "OE": 0.144
+  },
+  "overall": 0.228,
+  "ci95": [
+   0.036,
+   0.423
+  ],
+  "wins": 66,
+  "losses": 43
+ },
+ "v2_minus_final": {
+  "n": 171,
+  "by_dim": {
+   "GC": 0.15,
+   "IF": -0.001,
+   "IE": 0.0,
+   "OE": -0.11
+  },
+  "overall": 0.01,
+  "ci95": [
+   -0.111,
+   0.128
+  ],
+  "wins": 36,
+  "losses": 26
+ },
+ "dev_shadow_cases_only": {
+  "final": {
+   "GC": 2.417,
+   "IF": 3.835,
+   "OE": 1.818
+  },
+  "v2": {
+   "GC": 2.379,
+   "IF": 3.3,
+   "OE": 1.621
+  }
+ },
+ "genie3_published": {
+  "GC": 2.74,
+  "IF": 2.4,
+  "IE": 1.51,
+  "OE": 1.81,
+  "overall": 2.12
+ }
+}

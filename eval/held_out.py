@@ -46,13 +46,19 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         "sw27": {"baseline": "sweep27:lingbot2_14b_open_anchor", "final": "sweep27:lingbot2_14b_open_act8"},
         # shadow-world arm on the development half's first-person cases
         "v2dev": {"final": "final2dev"},
+        # the same 15 insight cases as sw27: re-anchoring only (control, from sweep27), the action register as an
+        # impulse (gain 8 for the first five chunks, then released; "alive" slot), and as a three-stage timeline
+        "sw29": {"baseline": "sweep27:lingbot2_14b_open_anchor", "alive": "sweep29:lingbot2_14b_open_imp",
+                 "final": "sweep29:lingbot2_14b_open_stg"},
+        # 12 development cases that return to more than one earlier view: shadow world, and shadow world + landmarks
+        "sw28": {"baseline": "final2dev", "final": "sweep28b:lingbot2_14b_open_lm"},
         # 14 turn-and-return out-of-sight cases: shadow world, and shadow world whose unseen copy gets the Exa sentence
         "sw26": {"baseline": "sweep26:lingbot2_14b_open_shadow", "final": "sweep26:lingbot2_14b_open_evolve"},
         "sw22": {"baseline": "sweep22:lingbot2_14b_open_base", "alive": "sweep22:lingbot2_14b_open_first",
                  "final": "sweep22:lingbot2_14b_open_shadow"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2", "sw28": "sweep28", "sw29": "sweep29"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 

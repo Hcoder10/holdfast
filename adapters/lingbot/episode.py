@@ -199,7 +199,10 @@ class Episode:
         if b is None:
             return
         if b.get("shadow_on"):
-            return self._shadow_world(b, yaw, pitch, move)
+            self._shadow_world(b, yaw, pitch, move)
+            if b.get("landmarks"):
+                self._landmarks(b, yaw, pitch, move)
+            return
         if self.s.chunk_id < 3:
             return
         ty = (self.ayaw + yaw + 180.0) % 360.0 - 180.0
@@ -294,6 +297,45 @@ class Episode:
                                else round(float(self.pin_mask.mean()), 2)})
             b["shadow"] = None
 
+    def _landmarks(self, b, yaw, pitch, move):
+        """Several significant views, not only the one just left.
+
+        A view is significant when the camera stopped or changed what it was doing there: the start, the end
+        of every turn or walk, every pause. Each is kept as the latent of that moment with its heading and
+        position. When the camera is about to arrive back at one of them (having been elsewhere, and after it
+        has dropped out of the three-second attention window), the arriving frame is pinned to it through the
+        image-condition channel, the same port the shadow world writes to. The shadow world keeps priority:
+        it holds the view that was just left as it is now; landmarks hold older views as they were."""
+        lm = b["landmarks"]
+        kind = "wait" if not (yaw or pitch or move) else move or ("yaw%+d" % np.sign(yaw) if yaw else "pitch%+d" % np.sign(pitch))
+        if b["views"] and kind != lm.get("last_kind"):
+            b["views"][-1]["sig"] = True               # what the camera was looking at when the action changed
+        lm["last_kind"] = kind
+        if getattr(self, "_key", None) is not None or kind == "wait" or self.s.chunk_id < 3:
+            return
+        ty = (self.ayaw + yaw + 180.0) % 360.0 - 180.0
+        tp = self.apitch + pitch
+        tpos = self._moved(move)
+        cy, cp = (self.ayaw + 180.0) % 360.0 - 180.0, self.apitch
+        best = None
+        start = {"sig": True, "chunk": -1, "yaw": 0.0, "pitch": 0.0, "pos": (0.0, 0.0), "frame": b["first"]}
+        for e in b["views"] + [start]:
+            if not e.get("sig") or e["chunk"] > self.s.chunk_id - lm["min_age"]:
+                continue
+            if np.hypot(e["pos"][0] - tpos[0], e["pos"][1] - tpos[1]) > lm["pos_tol"]:
+                continue
+            d = max(abs((e["yaw"] - ty + 180.0) % 360.0 - 180.0), abs(e["pitch"] - tp))
+            here = (np.hypot(e["pos"][0] - self.pos[0], e["pos"][1] - self.pos[1]) <= lm["pos_tol"] and
+                    max(abs((e["yaw"] - cy + 180.0) % 360.0 - 180.0), abs(e["pitch"] - cp)) <= lm["tol"])
+            if d <= lm["tol"] and not here and (best is None or d < best[0]):
+                best = (d, e)
+        if best is not None:
+            e = best[1]
+            self._key = (e["frame"] if "frame" in e else e["lat"][:, CHUNK - 1].clone(), CHUNK - 1, None)
+            lm["pins"] += 1
+            b["reads"].append({"at_chunk": self.s.chunk_id, "via": "landmark", "from_chunk": best[1]["chunk"],
+                               "offset_deg": round(best[0], 1), "by": kind})
+
     def _moved(self, move):
         """Position after `move`, in steps, in the starting view's frame (x right, z forward)."""
         x, z = self.pos
@@ -322,6 +364,8 @@ class Episode:
         for v in old:
             b["views"].remove(v)
             b["superseded"] += 1
+            if v.get("sig"):
+                e["sig"] = True
         b["views"].append(e)
 
     # -- side memory: what to write when the camera comes back ---------------
@@ -366,12 +410,37 @@ class Episode:
                                else self.s.register_gain), 3),
                            "sink_gain": self.s.tune.get("sink_gain", 1.0)})
 
+    def _act_tick(self):
+        """Time-varying action register for still-camera scenes (see outsight.action / outsight.stages)."""
+        a = getattr(self, "act_sched", None)
+        if not a:
+            return
+        c = self.s.chunk_id
+        if a["kind"] == "impulse":
+            g = a["gain"] if c < a["until"] else (a["gain"] * a["after"]) ** 0.5 if c == a["until"] else a["after"]
+            self.s.register_gain = g
+            a["trace"].append(round(float(g), 2))
+            return
+        if not a.get("installed"):
+            self.s.set_registers(self._first_prompt, a["texts"], [a["gain"]] + [0.01] * (len(a["texts"]) - 1))
+            a["installed"] = True
+        n = len(a["texts"])
+        pos = min(n - 1e-6, c * n / max(1, a["total"]))
+        i, frac = int(pos), pos - int(pos)
+        gains = [0.01] * n
+        gains[i] = a["gain"]
+        if i + 1 < n and frac > 0.8:                     # hand over to the next stage across the boundary
+            gains[i], gains[i + 1] = a["gain"] ** 0.5, a["gain"] ** 0.5
+        self.s.register_gains = gains
+        a["trace"].append([round(g, 2) for g in gains])
+
     # -- low level ---------------------------------------------------------
     def _step(self, label, yaw=0.0, pitch=0.0, move=None, hold=False, rewind=None):
         """One chunk: rotate by (yaw, pitch) degrees or translate. Returns the
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
         guide, reloc = None, None
         direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
+        self._act_tick()
         self._ret_update(yaw, pitch)
         self._bank_read(yaw, pitch, move)
         if move is not None:
@@ -817,18 +886,30 @@ class Episode:
                     not when or (case.get("perspective") or "").strip().lower() == when):
                 self.register = dict(self.cfg["register"], text=obj)
         self.act_info = None
+        self.act_sched = None
         ac = self.cfg.get("act_register")
         if ac and (case.get("prompt") or "").lower().startswith("wait and observe"):
             # A still-camera case has no request to follow. The action comes from the scene and from Exa,
             # and goes into the same register that makes third-person subjects act.
             import outsight
             try:
-                self.act_info = outsight.action(dict(case, image_caption=case["image_caption"]), image,
-                                                use_web=not ac.get("noweb"), use_memory=not ac.get("nomem"))
+                if ac.get("stages"):
+                    self.act_info = outsight.stages(dict(case, image_caption=case["image_caption"]), image,
+                                                    use_web=not ac.get("noweb"), use_memory=not ac.get("nomem"))
+                else:
+                    self.act_info = outsight.action(dict(case, image_caption=case["image_caption"]), image,
+                                                    use_web=not ac.get("noweb"), use_memory=not ac.get("nomem"))
             except Exception as e:
                 self.act_info = {"text": "", "source": "failed: " + repr(e)[:120]}
             if self.act_info.get("text"):
                 self.register = {"gain": float(ac.get("gain", 8.0)), "text": self.act_info["text"], "replace": True}
+                if ac.get("until") is not None:
+                    # impulse: full gain to start the action, then released so the model's own dynamics carry it on
+                    self.act_sched = {"kind": "impulse", "gain": float(ac.get("gain", 8.0)), "until": int(ac["until"]),
+                                      "after": float(ac.get("after", 1.0)), "trace": []}
+            elif self.act_info.get("stages"):
+                self.act_sched = {"kind": "stages", "gain": float(ac.get("gain", 4.0)), "texts": self.act_info["stages"],
+                                  "total": int(ac.get("total", 40)), "trace": []}
         if self.cfg.get("prompt", "caption") == "caption+objective" and not (
                 self.register and self.register.get("replace")):   # "replace": the register carries it alone
             # PlayWorld's released local adapter gives the model the objective as its
@@ -856,6 +937,7 @@ class Episode:
             self.memory_entries = recall_entries(case["task_id"])
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
+        self._first_prompt = first_prompt
         s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho", "cam_gain", "ssa", "noise_flow") if k in self.cfg}
         if getattr(s, "camguide", None) is not None:
             s.camguide.calls = 0
@@ -882,7 +964,11 @@ class Episode:
                          "shadow_on": bool(bc.get("shadow")), "shadow": None, "home": None, "shadow_n": 0,
                          "max_shadow": int(bc.get("max_shadow", 28)), "forks": 0, "dropped": 0, "shadow_total": 0,
                          "evolve_text": None, "evolve_gain": float((bc.get("evolve") or {}).get("gain", 8.0)),
-                         "evolve_info": None}
+                         "evolve_info": None, "landmarks": None}
+            if bc.get("landmarks"):
+                lc = bc["landmarks"]
+                self.bank["landmarks"] = {"tol": float(lc.get("tol", 12.0)), "min_age": int(lc.get("min_age", 5)),
+                                          "pos_tol": float(lc.get("pos_tol", 0.5)), "pins": 0, "last_kind": "start"}
             if bc.get("evolve") and (case.get("perspective") or "").strip().lower() != "third person":
                 import outsight
                 try:
@@ -1008,13 +1094,17 @@ class Episode:
                     self.cap_gate, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "plan": None if not self.plan else {k: self.plan[k] for k in ("decision", "why", "recalled")},
                 "act_register": self.act_info,
+                "act_schedule": None if not self.act_sched else {k: v for k, v in self.act_sched.items() if k != "texts"},
                 "ledger": None if self.ledger is None else dict(
                     self.ledger, pinned_fraction=None if self.pin_mask is None else round(float(self.pin_mask.mean()), 2)),
                 "bank": None if not getattr(self, "bank", None) else {
                     "views": len(self.bank["views"]), "superseded": self.bank["superseded"],
                     "reads": self.bank["reads"], "forks": self.bank["forks"], "dropped": self.bank["dropped"],
                     "evolve_text": self.bank.get("evolve_text"), "evolve_info": self.bank.get("evolve_info"),
-                    "unseen_chunks_run": self.bank["shadow_total"]},
+                    "unseen_chunks_run": self.bank["shadow_total"],
+                    "landmarks": None if not self.bank.get("landmarks") else {
+                        "kept": sum(1 for v in self.bank["views"] if v.get("sig")),
+                        "pins": self.bank["landmarks"]["pins"]}},
                 "ret": None if not getattr(self, "ret", None) else {
                     "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
                     "sink": self.ret["sink"], "bias_hits": __import__("sdpa_shim").BIAS_HITS, "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
