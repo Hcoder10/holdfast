@@ -247,6 +247,12 @@ The first test of this write (12 cases) showed nothing, and looking at why found
 the agent player's top-up steps, so "back at the landmark" was never detected in 6 of 12 cases; and the start
 view was pinned as the VAE's first latent (one frame) in a slot that holds four, which decoded washed out. The
 tables above are after both fixes.
+
+A last revision addressed both held-out failure causes: the view is held on the checkpoint through the agent
+player's top-up steps, and the write happens only if the checkpoint is among the stored views most similar to
+the latent on screen (a read before the write). On all 19 cases against the same shadow-world clips, judged
+twice (`results/sweep35.json`; a few scores missing when the judging budget ran out): -0.26, interval -0.73 to
++0.08, 3 better and 4 worse. No gain. Landmarks stay out of the reported program.
 <!-- /LANDMARKS -->
 
 ### Reading the state
