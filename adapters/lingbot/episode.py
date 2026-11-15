@@ -730,6 +730,8 @@ class Episode:
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
         s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho") if k in self.cfg}
+        _shim = __import__("sdpa_shim")
+        _shim.SELF_DIAG_ON, _shim.SELF_DIAG = bool(self.cfg.get("sink_diag")), []
         st_cfg = self.cfg.get("steer") or {}
         if "steps" in st_cfg:
             s.tune["steer_steps"] = list(st_cfg["steps"])
@@ -837,6 +839,7 @@ class Episode:
                     "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
                     "sink": self.ret["sink"], "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
                     "trace": self.ret["trace"]},
+                "sink_diag": list(__import__("sdpa_shim").SELF_DIAG),
                 "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes,
                              residual_writes=getattr(getattr(s, "probe", None), "writes", 0)),
                 "register": None if not self.register else dict(

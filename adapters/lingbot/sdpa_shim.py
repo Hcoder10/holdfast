@@ -62,6 +62,11 @@ def sdpa_flash_attention(q, k, v, q_lens=None, k_lens=None, dropout_p=0.0,
 # self-attention calls whose cache already extends past the sink and the current chunk.
 SELF_SINK = None
 SELF_HITS = 0
+# Diagnostic: share of self-attention that lands on the sink keys, measured directly
+# (explicit softmax over a sample of queries) without and with the gain. Filled only
+# while SELF_DIAG_ON is set; one entry per measured call.
+SELF_DIAG_ON = False
+SELF_DIAG = []
 
 
 def self_attention(q, k, v, **kw):
@@ -77,6 +82,15 @@ def self_attention(q, k, v, **kw):
         mask[:ss[0]] = ss[1]
         mask = mask[None, None, None, :]
         SELF_HITS += 1
+        if SELF_DIAG_ON and SELF_HITS % 97 == 1 and len(SELF_DIAG) < 400:
+            qs = q[0, ::max(1, lq // 48)].float().transpose(0, 1)          # [heads, m, C]
+            ks = k[0].float().transpose(0, 1)                               # [heads, lk, C]
+            logits = torch.einsum("hmc,hkc->hmk", qs, ks) / (q.size(-1) ** 0.5)
+            plain = logits.softmax(-1)[..., :ss[0]].sum(-1).mean().item()
+            biased = (logits + mask[0, 0].float()).softmax(-1)[..., :ss[0]].sum(-1).mean().item()
+            top = logits.softmax(-1).max(-1).values.mean().item()
+            SELF_DIAG.append({"hit": SELF_HITS, "lk": lk, "sink_share_plain": round(plain, 4),
+                              "sink_share_with_gain": round(biased, 4), "mean_top1_weight": round(top, 4)})
     out = F.scaled_dot_product_attention(q.transpose(1, 2).to(dtype), k.transpose(1, 2).to(dtype),
                                          v.transpose(1, 2).to(dtype), attn_mask=mask)
     return out.transpose(1, 2).contiguous()
