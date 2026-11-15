@@ -230,3 +230,22 @@ more out-of-sight trajectory checks (12 vs 8), and re-anchoring helps the 30 s i
 Development half (76 cases, one Gemini pass, both arms blinded together): unmodified 2.15 (GC 2.30, IF 2.43, IE 2.40,
 OE 1.46), final 2.34 (2.42, 2.44, 2.67, 1.82); paired +0.19 (-0.10 to +0.48). Combined with the held-out half:
 unmodified 2.10, final 2.31, paired +0.22 (95% interval +0.03 to +0.40) over 171 cases. `results/full_benchmark.json`.
+
+### Frozen-case test of the residual "alive" write, judged (sweep21, 06:12)
+
+21 development-half cases: 15 the judge had called frozen or static, 6 that scored well. Two Gemini passes averaged.
+
+| arm | 15 frozen cases | 6 controls |
+|---|---|---|
+| cohesive base (objective prompt, third-person register, re-anchoring) | 1.87 | 3.00 |
+| + alive write always on (0.03, sampling steps 0-1) | 1.93 | 2.45 |
+
+The write that triples frame-to-frame motion does not make the judge score frozen cases higher (+0.06, inside the
+0.67 repeat spread on this set), and switched on everywhere it costs half a point on scenes that were fine. More
+motion is not the same as the requested thing happening.
+
+The third arm, "planner", did not run the planner: it was given an empty settings object, which the code read as
+off, so it ran as objective-only (1.67 and 3.30, i.e. no different from the base within noise). The switch is
+fixed and the arm was run again as sweep21b.
+
+The per-dimension "overall" printed by the tally for this set is not meaningful: geometry has one case in it.
