@@ -197,3 +197,17 @@ Kept, at gain 4.
 |---|---|---|
 | final1 part A (49 cases, 4 GPUs) | 3 | $13 |
 | final1 part B (46 cases, 6 GPUs) | 4 | $18 |
+
+### Blinding bug in the held-out judging (04:50), found at the first tally
+
+`eval/blind.py` replaced each run folder's name with "system_under_test" inside the prompts. The held-out arms were
+named `baseline`, `objective` and `final`, so ordinary words were rewritten: every "final" in the final arm's scoring
+prompts (about 62 per prompt; "final score" became "system_under_test score") and "objective" in the objective arm's
+gate prompts. The baseline arm was untouched. Fixed: only the model identifier is replaced. The 140 affected prompts
+were restored from the originals, the 190 scores and 90 gate checks made with them were set aside
+(`*.misworded.json`, kept) and those calls were judged again in both passes.
+
+| Modal ledger | GPU-h | est. cost |
+|---|---|---|
+| base95: unmodified model on the 95 held-out cases (5 GPUs) | 6 | $27 |
+| final1dev: final configuration on the 76 development-half cases, for a full-benchmark figure (5 GPUs) | 5.5 | $25 |
