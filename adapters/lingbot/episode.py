@@ -308,24 +308,36 @@ class Episode:
         it holds the view that was just left as it is now; landmarks hold older views as they were."""
         lm = b["landmarks"]
         kind = "wait" if not (yaw or pitch or move) else move or ("yaw%+d" % np.sign(yaw) if yaw else "pitch%+d" % np.sign(pitch))
-        if b["views"] and kind != lm.get("last_kind"):
+        agent = str(getattr(self, "_cur_label", "")).startswith("agent")
+        # Position for landmarks counts scripted moves only. The benchmark's agent player adds top-up steps when
+        # the model under-executes a move; they correct the picture, they are not extra distance. (Counting them
+        # put "home" out of reach in 6 of 12 cases of the first test, so nothing was pinned there.)
+        if b["views"] and kind != lm.get("last_kind") and not agent:
             b["views"][-1]["sig"] = True               # what the camera was looking at when the action changed
-        lm["last_kind"] = kind
-        if getattr(self, "_key", None) is not None or kind == "wait" or self.s.chunk_id < 3:
+            b["views"][-1]["lpos"] = tuple(lm["pos"])
+        if not agent:
+            lm["last_kind"] = kind
+        cur = tuple(lm["pos"])
+        if move is not None and not agent:
+            h = np.radians(self.ayaw)
+            fx, fz = np.sin(h), np.cos(h)
+            dx, dz = {"forward": (fx, fz), "back": (-fx, -fz), "strafe_right": (fz, -fx), "strafe_left": (-fz, fx)}[move]
+            lm["pos"] = [cur[0] + dx, cur[1] + dz]
+        tpos = tuple(lm["pos"])
+        if getattr(self, "_key", None) is not None or kind == "wait" or agent or self.s.chunk_id < 3:
             return
         ty = (self.ayaw + yaw + 180.0) % 360.0 - 180.0
         tp = self.apitch + pitch
-        tpos = self._moved(move)
         cy, cp = (self.ayaw + 180.0) % 360.0 - 180.0, self.apitch
         best = None
-        start = {"sig": True, "chunk": -1, "yaw": 0.0, "pitch": 0.0, "pos": (0.0, 0.0), "frame": b["first"]}
+        start = {"sig": True, "chunk": -1, "yaw": 0.0, "pitch": 0.0, "lpos": (0.0, 0.0), "frame": b["first"]}
         for e in b["views"] + [start]:
             if not e.get("sig") or e["chunk"] > self.s.chunk_id - lm["min_age"]:
                 continue
-            if np.hypot(e["pos"][0] - tpos[0], e["pos"][1] - tpos[1]) > lm["pos_tol"]:
+            if np.hypot(e["lpos"][0] - tpos[0], e["lpos"][1] - tpos[1]) > lm["pos_tol"]:
                 continue
             d = max(abs((e["yaw"] - ty + 180.0) % 360.0 - 180.0), abs(e["pitch"] - tp))
-            here = (np.hypot(e["pos"][0] - self.pos[0], e["pos"][1] - self.pos[1]) <= lm["pos_tol"] and
+            here = (np.hypot(e["lpos"][0] - cur[0], e["lpos"][1] - cur[1]) <= lm["pos_tol"] and
                     max(abs((e["yaw"] - cy + 180.0) % 360.0 - 180.0), abs(e["pitch"] - cp)) <= lm["tol"])
             if d <= lm["tol"] and not here and (best is None or d < best[0]):
                 best = (d, e)
@@ -366,6 +378,7 @@ class Episode:
             b["superseded"] += 1
             if v.get("sig"):
                 e["sig"] = True
+                e["lpos"] = v.get("lpos", e["pos"])
         b["views"].append(e)
 
     # -- side memory: what to write when the camera comes back ---------------
@@ -440,6 +453,7 @@ class Episode:
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
         guide, reloc = None, None
         direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
+        self._cur_label = label
         self._act_tick()
         self._ret_update(yaw, pitch)
         self._bank_read(yaw, pitch, move)
@@ -960,7 +974,7 @@ class Episode:
             self.bank = {"views": [], "tol": float(bc.get("tol", 12.0)), "min_age": int(bc.get("min_age", 5)),
                          "gain": bc.get("gain"), "loaded": 1, "reads": [], "superseded": 0,
                          "via": bc.get("via", "sink"), "armed": False,
-                         "pos_tol": float(bc.get("pos_tol", 0.6)), "first": s.cond_lat[:, 0].clone(),
+                         "pos_tol": float(bc.get("pos_tol", 0.6)), "first": s.start_late.clone(),
                          "shadow_on": bool(bc.get("shadow")), "shadow": None, "home": None, "shadow_n": 0,
                          "max_shadow": int(bc.get("max_shadow", 28)), "forks": 0, "dropped": 0, "shadow_total": 0,
                          "evolve_text": None, "evolve_gain": float((bc.get("evolve") or {}).get("gain", 8.0)),
@@ -968,7 +982,8 @@ class Episode:
             if bc.get("landmarks"):
                 lc = bc["landmarks"]
                 self.bank["landmarks"] = {"tol": float(lc.get("tol", 12.0)), "min_age": int(lc.get("min_age", 5)),
-                                          "pos_tol": float(lc.get("pos_tol", 0.5)), "pins": 0, "last_kind": "start"}
+                                          "pos_tol": float(lc.get("pos_tol", 0.5)), "pins": 0, "last_kind": "start",
+                                          "pos": [0.0, 0.0]}
             if bc.get("evolve") and (case.get("perspective") or "").strip().lower() != "third person":
                 import outsight
                 try:

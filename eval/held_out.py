@@ -46,6 +46,8 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         "sw27": {"baseline": "sweep27:lingbot2_14b_open_anchor", "final": "sweep27:lingbot2_14b_open_act8"},
         # shadow-world arm on the development half's first-person cases
         "v2dev": {"final": "final2dev"},
+        # landmarks with the trigger fixed (scripted moves only), 10 cases, both arms generated together
+        "sw30": {"baseline": "sweep31:lingbot2_14b_open_shadow", "final": "sweep31:lingbot2_14b_open_lm"},
         # the same 15 insight cases as sw27: re-anchoring only (control, from sweep27), the action register as an
         # impulse (gain 8 for the first five chunks, then released; "alive" slot), and as a three-stage timeline
         "sw29": {"baseline": "sweep27:lingbot2_14b_open_anchor", "alive": "sweep29:lingbot2_14b_open_imp",
@@ -58,7 +60,7 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
                  "final": "sweep22:lingbot2_14b_open_shadow"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2", "sw28": "sweep28", "sw29": "sweep29"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2", "sw28": "sweep28", "sw29": "sweep29", "sw30": "sweep31"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 

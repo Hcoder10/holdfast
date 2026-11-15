@@ -260,6 +260,10 @@ class LingBotStepper:
         video = torch.concat([first, torch.zeros(3, n_exact - 1, self.h, self.w)], dim=1)
         self.cond_lat = p.vae.encode([video.to(self.device)])[0]  # [16, 21, h, w]
         del video
+        # The start view as a later latent frame. The VAE is causal: its first latent holds one frame, every later
+        # one holds four, and they are not interchangeable (the first latent pinned into a later slot decodes
+        # washed out with a grid pattern). A still clip of the image gives the right kind for pinning on return.
+        self.start_late = p.vae.encode([first.repeat(1, 9, 1, 1).to(self.device)])[0][:, -1].clone()
 
         fx, fy, cx, cy = self.intrinsics_480
         ks = torch.tensor([[fx, fy, cx, cy]], dtype=torch.float32)

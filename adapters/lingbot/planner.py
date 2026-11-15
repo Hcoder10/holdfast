@@ -66,9 +66,15 @@ stated here; rely on the evidence listed below.
 "alive": 0 | 0.03 | 0.06        a residual-stream direction added on the first two sampling steps; raises
                                 frame-to-frame motion
 "anchor": 0 | 0.5               pulls each chunk's latent mean back toward the first chunk's
+"scene_action": "none" | "constant" | "impulse" | "timeline"
+                                only for a still camera ("wait and observe"): what is written into the
+                                cross-attention register about what the subjects do, from a web answer (Exa).
+                                constant = one action sentence at gain 8 for the whole video; impulse = that
+                                sentence at gain 8 for the first five chunks, then released; timeline = three
+                                sentences (early, middle, late) the register advances through; none = no write
 
 Also give "why": one short sentence naming the evidence that decided it.
-JSON keys: action_register, alive, anchor, why."""
+JSON keys: action_register, alive, anchor, scene_action, why."""
 NL = chr(10)
 
 ALLOWED = {"action_register": (0, 4, 8), "alive": (0, 0.03, 0.06), "anchor": (0, 0.5)}
@@ -83,7 +89,9 @@ def _snap(v, choices, default):
 
 
 EVIDENCE_Q = ("measured effect on judged scores, rules and hypotheses about the state-program controls: "
-              "alive residual write, action register, latent re-anchoring")
+              "alive residual write, action register, latent re-anchoring, action register on still-camera scenes")
+SCENE_ACTION = {"none": None, "constant": {"gain": 8}, "impulse": {"gain": 8, "until": 5, "after": 1.0},
+                "timeline": {"stages": True, "gain": 4, "total": 40}}
 KIND_RE = re.compile(r"[[](belief|measured|rule) from (.+?)[]] *(.*)", re.S)
 
 
@@ -156,9 +164,13 @@ def decide(case, image, use_memory=True, model=None, from_memory=False, as_of=No
     d = {"action_register": _snap(v.get("action_register"), ALLOWED["action_register"], 8 if third else 0),
          "alive": _snap(v.get("alive"), ALLOWED["alive"], 0),
          "anchor": _snap(v.get("anchor"), ALLOWED["anchor"], 0.5)}
+    sa = str(v.get("scene_action", "none")).strip().lower()
+    d["scene_action"] = sa if (wait and sa in SCENE_ACTION) else "none"
     if wait:
         d["action_register"] = 0      # there is no action text to amplify
     cfg = {"anchor_stats": d["anchor"]}
+    if SCENE_ACTION[d["scene_action"]]:
+        cfg["act_register"] = dict(SCENE_ACTION[d["scene_action"]])
     if d["action_register"] > 0:
         cfg["register"] = {"gain": d["action_register"], "replace": True}
     if d["alive"] > 0:
