@@ -816,6 +816,19 @@ class Episode:
             if obj and not obj.lower().startswith("wait and observe") and (
                     not when or (case.get("perspective") or "").strip().lower() == when):
                 self.register = dict(self.cfg["register"], text=obj)
+        self.act_info = None
+        ac = self.cfg.get("act_register")
+        if ac and (case.get("prompt") or "").lower().startswith("wait and observe"):
+            # A still-camera case has no request to follow. The action comes from the scene and from Exa,
+            # and goes into the same register that makes third-person subjects act.
+            import outsight
+            try:
+                self.act_info = outsight.action(dict(case, image_caption=case["image_caption"]), image,
+                                                use_web=not ac.get("noweb"), use_memory=not ac.get("nomem"))
+            except Exception as e:
+                self.act_info = {"text": "", "source": "failed: " + repr(e)[:120]}
+            if self.act_info.get("text"):
+                self.register = {"gain": float(ac.get("gain", 8.0)), "text": self.act_info["text"], "replace": True}
         if self.cfg.get("prompt", "caption") == "caption+objective" and not (
                 self.register and self.register.get("replace")):   # "replace": the register carries it alone
             # PlayWorld's released local adapter gives the model the objective as its
@@ -994,6 +1007,7 @@ class Episode:
                 "cap_gate": None if not getattr(self, "cap_gate", None) else dict(
                     self.cap_gate, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "plan": None if not self.plan else {k: self.plan[k] for k in ("decision", "why", "recalled")},
+                "act_register": self.act_info,
                 "ledger": None if self.ledger is None else dict(
                     self.ledger, pinned_fraction=None if self.pin_mask is None else round(float(self.pin_mask.mean()), 2)),
                 "bank": None if not getattr(self, "bank", None) else {
