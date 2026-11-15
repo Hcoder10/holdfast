@@ -601,8 +601,14 @@ class Episode:
         if self.cfg.get("register"):
             # {"gain": w, "ramp": chunks}: the objective goes into its own text register
             # rather than into the caption, with an attention gain (see stepper.set_register)
+            # "when": only for that perspective. In a third-person case the objective says
+            # what the visible subject does; in a first-person case it instructs the viewer
+            # and is carried out by the camera path, so its words (which name the camera)
+            # are not amplified.
             obj = (case.get("prompt") or "").strip()
-            if obj and not obj.lower().startswith("wait and observe"):
+            when = self.cfg["register"].get("when")
+            if obj and not obj.lower().startswith("wait and observe") and (
+                    not when or (case.get("perspective") or "").strip().lower() == when):
                 self.register = dict(self.cfg["register"], text=obj)
         if self.cfg.get("prompt", "caption") == "caption+objective":
             # PlayWorld's released local adapter gives the model the objective as its
