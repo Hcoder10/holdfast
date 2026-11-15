@@ -129,7 +129,7 @@ def segment(case, asked, left, right, note, seconds):
                 rad = 12 + (8 * max(0.0, 1 - age / 2.0))
                 dr.ellipse([X(pc) - rad, Y(pp) - rad, X(pc) + rad, Y(pp) + rad], outline=m.ACC, width=4)
                 up = Y(pp) < (y0 + y1) / 2
-                dr.text((X(pc) - 170, Y(pp) + (18 if up else -40)), f"arrived: '{src}' checkpoint written back", font=ft, fill=m.ACC)
+                dr.text((min(X(pc) - 170, x1 - 330), Y(pp) + (18 if up else -40)), f"arrived: '{src}' checkpoint written back", font=ft, fill=m.ACC)
         fr = cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2BGR)
         for clip, x in ((a, 40), (b, 600)):
             g = clip[min(len(clip) - 1, int(f * (len(clip) - 1)))]

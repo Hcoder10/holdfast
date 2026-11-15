@@ -46,6 +46,9 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         "sw27": {"baseline": "sweep27:lingbot2_14b_open_anchor", "final": "sweep27:lingbot2_14b_open_act8"},
         # shadow-world arm on the development half's first-person cases
         "v2dev": {"final": "final2dev"},
+        # 12 cases with sideways steps (5 development, 7 held-out): landmarks, and landmarks + camera guidance on the
+        # sideways chunks only
+        "sw34": {"baseline": "sweep34:lingbot2_14b_open_lm", "final": "sweep34:lingbot2_14b_open_lmcam"},
         # landmarks on the nine held-out cases that return to an earlier position by walking or sliding (post hoc)
         "sw33": {"baseline": "sweep33:lingbot2_14b_open_shadow", "final": "sweep33:lingbot2_14b_open_lm"},
         # sw30 again on all ten cases (sw30 was judged before every clip had finished)
@@ -66,7 +69,7 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
                  "final": "sweep22:lingbot2_14b_open_shadow"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2", "sw28": "sweep28", "sw29": "sweep29", "sw30": "sweep31", "sw32": "sweep32", "sw31": "sweep31_full", "sw33": "sweep33"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2", "sw28": "sweep28", "sw29": "sweep29", "sw30": "sweep31", "sw32": "sweep32", "sw31": "sweep31_full", "sw33": "sweep33", "sw34": "sweep34"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 

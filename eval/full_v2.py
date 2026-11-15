@@ -55,10 +55,10 @@ def paired(a, b):
     by = {d: [b[c] - a[c] for c in common if dim(c) == d] for d in DIMS}
     rng, boots = random.Random(0), []
     for _ in range(5000):
-        boots.append(st.mean(st.mean(rng.choices(v, k=len(v))) for v in by.values()))
+        boots.append(st.mean(st.mean(rng.choices(v, k=len(v))) for v in by.values() if v))
     boots.sort()
-    return {"n": len(common), "by_dim": {d: round(st.mean(v), 3) for d, v in by.items()},
-            "overall": round(st.mean(st.mean(v) for v in by.values()), 3), "ci95": [round(boots[125], 3), round(boots[4874], 3)],
+    return {"n": len(common), "by_dim": {d: round(st.mean(v), 3) for d, v in by.items() if v},
+            "overall": round(st.mean(st.mean(v) for v in by.values() if v), 3), "ci95": [round(boots[125], 3), round(boots[4874], 3)],
             "wins": sum(b[c] > a[c] + 0.25 for c in common), "losses": sum(b[c] < a[c] - 0.25 for c in common)}
 
 

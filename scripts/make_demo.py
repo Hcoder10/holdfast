@@ -122,10 +122,11 @@ SEGMENTS = [
          right=("Write 3: shadow world, written back on return", V + "sweep22/lingbot2_14b_open_shadow/GC015.mp4"),
          look="When the camera turns away, a copy of the model's whole state keeps running the view that was left. On return "
               "the arriving frame is pinned to the copy's frame through the model's own conditioning input.", seconds=14),
-    dict(asked="Turn the camera right, then turn back to the original view (a western street).",
-         left=("Without the shadow world", V + "sweep22/lingbot2_14b_open_base/GC010.mp4"),
-         right=("Write 3: shadow world, written back on return", V + "sweep22/lingbot2_14b_open_shadow/GC010.mp4"),
-         look="Over all 171 cases: geometry 2.45 without this write, 2.60 with it; it costs a little on out-of-sight.", seconds=10),
+    dict(asked="Walk into the room, walk back out, then walk in again.",
+         left=("Shadow world only", V + "sweep31/lingbot2_14b_open_shadow/GC025.mp4"),
+         right=("Landmarks: checkpoints of the state, written back on arrival", V + "sweep31/lingbot2_14b_open_lm/GC025.mp4"),
+         look="The controller keeps the latent of every view where the camera stopped. Arriving back, the frame is pinned to "
+              "it. Ten test cases, judged twice: +0.81 (95% interval +0.04 to +1.70). A small sample.", seconds=12),
     dict(asked="The woman walks forward to the base of the Great Sphinx.",
          left=("Unmodified model", V + "sweep18/lingbot2_14b_open_base/IF011.mp4"),
          right=("Request at 8x attention", V + "sweep16/lingbot2_14b_open_reg8/IF011.mp4"),

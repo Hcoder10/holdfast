@@ -454,6 +454,14 @@ class Episode:
         guide, reloc = None, None
         direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
         self._cur_label = label
+        cm = self.cfg.get("cam_moves")
+        if cm:
+            # Camera guidance only on the moves the model tends to ignore (sideways steps): the camera layer's
+            # scale and shift are extrapolated away from a still camera's on those chunks and left alone on turns,
+            # where the same write over-rotates.
+            on = move in cm.get("moves", ("strafe_left", "strafe_right"))
+            self.s.tune["cam_gain"] = float(cm.get("gain", 3.0)) if on else 1.0
+            self.cam_moves_chunks = getattr(self, "cam_moves_chunks", 0) + int(on)
         self._act_tick()
         self._ret_update(yaw, pitch)
         self._bank_read(yaw, pitch, move)
@@ -1109,6 +1117,7 @@ class Episode:
                     self.cap_gate, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "plan": None if not self.plan else {k: self.plan[k] for k in ("decision", "why", "recalled")},
                 "act_register": self.act_info,
+                "cam_moves_chunks": getattr(self, "cam_moves_chunks", None),
                 "act_schedule": None if not self.act_sched else {k: v for k, v in self.act_sched.items() if k != "texts"},
                 "ledger": None if self.ledger is None else dict(
                     self.ledger, pinned_fraction=None if self.pin_mask is None else round(float(self.pin_mask.mean()), 2)),
