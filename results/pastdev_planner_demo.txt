@@ -1,0 +1,60 @@
+== audiences ==
+wh-world members: ['cartographer', 'composer', 'controller', 'director']
+wh-programs members: ['controller', 'critic', 'planner']
+wh-lab members: ['experimenter', 'proposer']
+
+== records published to wh-programs (author, kind, time) ==
+2026-11-15T08:50:00Z  critic       rule      wh-plan-rule-register-0050  [queued]
+2026-11-15T13:10:00Z  proposer     belief    wh-plan-belief-alive-0510  [queued]
+2026-11-15T14:12:00Z  experimenter measured  wh-plan-measured-alive-0612  [queued]
+2026-11-15T14:45:00Z  experimenter measured  wh-plan-measured-alive-0645  [queued]
+2026-11-15T14:46:00Z  experimenter rule      wh-plan-rule-alive-0646  [queued]
+2026-11-15T14:05:00Z  experimenter measured  wh-plan-measured-anchor-0605  [queued]
+
+== what the planner reads, as the memory stood at 05:30 (belief and one rule) ==
+  2026-11-15T08:50:00Z  rule      by critic       supersededAt=None  source=wh-plan-rule-register-0050
+      Rule for every agent that builds a program: action_register must be 0 when the request is first-person or an instruction to the camera. Measured in frames at gain 4 and 8
+  2026-11-15T13:10:00Z  belief    by proposer     supersededAt=None  source=wh-plan-belief-alive-0510
+      Belief, not yet judged: the alive residual write fixes frozen scenes. It triples frame-to-frame motion with the picture intact. Use alive 0.06 when a subject must start m
+
+== planner decisions, as the memory stood at 05:30 (belief and one rule) ==
+  GC033  first person register 0   alive 0.06  anchor 0.5  | First-person camera instruction requires action_register=0 by rule; alive=0.06 needed because the camera must start movi
+  IF007  third person register 8   alive 0.06  anchor 0.5  | The request demands a visible third-person subject (the boy) perform a specific action (walk down stairs), requiring act
+  IF011  third person register 8   alive 0.06  anchor 0.5  | The request requires a visible third-person subject (the woman) to initiate walking motion from a static stance, necessi
+  OE005  first person register 0   alive 0.03  anchor 0.5  | First-person viewpoint requires action_register=0 per rule; alive=0.03 for calm observation without forced motion; ancho
+  OE006  first person register 0   alive 0.06  anchor 0.5  | First-person viewpoint requires action_register=0 per rule; alive=0.06 needed because the customer should transition fro
+  OE010  first person register 0   alive 0.06  anchor 0.5  | First-person viewpoint requires action_register=0 by rule; alive=0.06 needed to prevent the pedestrians from freezing mi
+  OE017  first person register 0   alive 0.06  anchor 0.5  | First-person camera instruction requires action_register 0 per rule; alive 0.06 needed because the camera must start mov
+  OE032  first person register 0   alive 0.06  anchor 0.5  | action_register must be 0 for first-person camera instructions per the rule; alive 0.06 needed because the camera must i
+
+== what the planner reads, as it stands now ==
+  2026-11-15T08:50:00Z  rule      by critic       supersededAt=None  source=wh-plan-rule-register-0050
+      Rule for every agent that builds a program: action_register must be 0 when the request is first-person or an instruction to the camera. Measured in frames at gain 4 and 8
+  2026-11-15T13:10:00Z  belief    by proposer     supersededAt=None  source=wh-plan-belief-alive-0510
+      Belief, not yet judged: the alive residual write fixes frozen scenes. It triples frame-to-frame motion with the picture intact. Use alive 0.06 when a subject must start m
+  2026-11-15T14:05:00Z  measured  by experimenter supersededAt=None  source=wh-plan-measured-anchor-0605
+      Measured with the benchmark judge (171 cases): latent re-anchoring at 0.5 is the only change on the 30 wait-and-observe cases and they score 2.57 against 2.30. Keep ancho
+  2026-11-15T14:12:00Z  measured  by experimenter supersededAt=None  source=wh-plan-measured-alive-0612
+      Measured with the benchmark judge (21 cases, two passes): the alive write always on at 0.03 does not lift frozen cases (1.87 to 1.93) and lowers cases that were fine (3.0
+  2026-11-15T14:45:00Z  measured  by experimenter supersededAt=None  source=wh-plan-measured-alive-0645
+      Measured with the benchmark judge (same 21 cases, two passes): programs with alive at 0.03 or 0.06 on every case scored 1.59 against 2.19 with alive 0. Dose-response: ali
+  2026-11-15T14:46:00Z  rule      by experimenter supersededAt=None  source=wh-plan-rule-alive-0646
+      Rule for every agent that builds a program: alive must be 0 until a judged test shows a gain. This replaces the proposer's belief of 05:10 that the alive write fixes froz
+
+== planner decisions, as it stands now ==
+  GC033  first person register 0   alive 0     anchor 0.5  | First-person camera instruction requires action_register 0 by rule; alive must be 0 until proven to gain (rule 2026-11-1
+  IF007  third person register 8   alive 0     anchor 0.5  | action_register 8 required for visible third-person subject (boy) performing an action (walking down stairs); alive must
+  IF011  third person register 8   alive 0     anchor 0.5  | action_register 8 for visible third-person subject acting; alive 0 per rule override of belief; anchor 0.5 per measured 
+  OE005  first person register 0   alive 0     anchor 0.5  | First-person viewpoint requires action_register 0 per RULE; wait-and-observe requests score 2.57 with anchor 0.5 per MEA
+  OE006  first person register 0   alive 0     anchor 0.5  | First-person viewpoint requires action_register 0 per RULE; alive must be 0 per RULE until judged gains appear; anchor 0
+  OE010  first person register 0   alive 0     anchor 0.5  | First-person viewpoint requires action_register=0 per rule; wait-and-observe measured gain with anchor=0.5; alive=0 per 
+  OE017  first person register 0   alive 0     anchor 0.5  | action_register must be 0 for first-person camera instructions (RULE); alive must be 0 until a judged test shows gain (R
+  OE032  first person register 0   alive 0     anchor 0.5  | action_register must be 0 for first-person camera instructions (RULE); alive must be 0 until a judged test shows gain (R
+
+== change ==
+alive switched on: 8 of 8 cases before; 0 of 8 after the experimenter's measurements and rule
+register on a first-person case (the critic's rule): 0 before, 0 after
+
+== the same question read by an agent outside wh-programs ==
+  composer: 0 of these records visible
+  proposer: 0 of these records visible

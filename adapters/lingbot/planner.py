@@ -59,6 +59,18 @@ MENU = """Controls (pick exactly one value for each):
 Also give "why": one short sentence naming what in the frame or the request decided it.
 JSON keys: action_register, alive, anchor, why."""
 
+MENU_NEUTRAL = """Controls (pick exactly one value for each). What each control does to the judged score is NOT
+stated here; rely on the evidence listed below.
+
+"action_register": 0 | 4 | 8    attention gain on the request text, in its own cross-attention segment
+"alive": 0 | 0.03 | 0.06        a residual-stream direction added on the first two sampling steps; raises
+                                frame-to-frame motion
+"anchor": 0 | 0.5               pulls each chunk's latent mean back toward the first chunk's
+
+Also give "why": one short sentence naming the evidence that decided it.
+JSON keys: action_register, alive, anchor, why."""
+NL = chr(10)
+
 ALLOWED = {"action_register": (0, 4, 8), "alive": (0, 0.03, 0.06), "anchor": (0, 0.5)}
 
 
@@ -70,7 +82,36 @@ def _snap(v, choices, default):
     return min(choices, key=lambda c: abs(c - v))
 
 
-def decide(case, image, use_memory=True, model=None):
+EVIDENCE_Q = ("measured effect on judged scores, rules and hypotheses about the state-program controls: "
+              "alive residual write, action register, latent re-anchoring")
+KIND_RE = re.compile(r"[[](belief|measured|rule) from (.+?)[]] *(.*)", re.S)
+
+
+def evidence(as_of=None):
+    """What the shared memory holds about the controls, as the planner may read it: each note with its
+    author, its kind (belief = untested, measured = judged result, rule = binding), its date, and whether
+    a later statement has superseded it."""
+    import mem
+    notes = []
+    for h in mem.recall("planner", EVIDENCE_Q, 20, as_of=as_of):
+        texts = [h.get("text") or ""] + list(h.get("excerpts") or [])
+        m = next((KIND_RE.search(t) for t in texts if KIND_RE.search(t)), None)
+        if not m:
+            continue
+        notes.append({"kind": m.group(1), "author": m.group(2), "text": " ".join(m.group(3).split())[:420],
+                      "occurred_at": h.get("occurred_at"), "superseded_at": h.get("superseded_at"),
+                      "source_id": h.get("source_id"), "claim": (h.get("text") or "")[:200]})
+    by = {}
+    for n in notes:                       # one line per source; superseded if any of its claims is
+        k = n["source_id"]
+        if k not in by:
+            by[k] = n
+        elif n["superseded_at"] and not by[k]["superseded_at"]:
+            by[k]["superseded_at"] = n["superseded_at"]
+    return sorted(by.values(), key=lambda x: x["occurred_at"] or "")
+
+
+def decide(case, image, use_memory=True, model=None, from_memory=False, as_of=None, write_back=True):
     """Returns {"decision": {...}, "cfg": the state-program keys to merge into the episode cfg,
     "recalled": what past.dev returned, "why": str}."""
     import llm
@@ -86,6 +127,23 @@ def decide(case, image, use_memory=True, model=None):
             recalled = [f"recall failed: {e!r}"[:120]]
     text = (f"Caption: {case.get('image_caption', '')}\nRequested: {case.get('prompt', '')}\n"
             f"Viewpoint: {case.get('perspective', '') or 'unknown'}\n\n" + MENU)
+    ev = []
+    if from_memory:
+        # The menu's claims about what each control does are replaced by what the memory holds, so the
+        # planner cannot mistake an untested belief for a result (which is what it did in sweep21b).
+        try:
+            ev = evidence(as_of)
+        except Exception as e:
+            ev = [{"kind": "error", "author": "", "text": repr(e)[:120], "occurred_at": None, "superseded_at": None}]
+        text = text.replace(MENU, MENU_NEUTRAL)
+        text += (NL + NL + "Evidence from the shared memory, oldest first. A MEASURED note is a judged result and "
+                 "overrides any BELIEF (an untested claim). A RULE must be obeyed. A note marked SUPERSEDED "
+                 "is void. If the evidence gives no measured gain for a control, set it to 0." + NL)
+        for n in ev:
+            text += (f"- {n['kind'].upper()}{' (SUPERSEDED)' if n.get('superseded_at') else ''} by {n['author']} "
+                     f"at {n['occurred_at']}: {n['text']}" + NL)
+        if not ev:
+            text += "- (nothing recorded)" + NL
     if recalled and not recalled[0].startswith("recall failed"):
         text += "\n\nNotes recorded by the controller and critic on earlier scenes (may or may not apply):\n- " + \
                 "\n- ".join(recalled[:4])
@@ -106,7 +164,7 @@ def decide(case, image, use_memory=True, model=None):
     if d["alive"] > 0:
         cfg["steer"] = {"file": "alive.npz", "alpha": d["alive"], "steps": [0, 1], "cache": False}
     why = str(v.get("why", ""))[:200]
-    if use_memory:
+    if use_memory and write_back:
         try:
             import mem
             mem.write("planner", "program", f"{case.get('task_id')} launch decision: action_register {d['action_register']}, "
@@ -114,4 +172,4 @@ def decide(case, image, use_memory=True, model=None):
                       f"Request: {case.get('prompt', '')}. Reason: {why}", meta={"case": case.get("task_id"), **d})
         except Exception:
             pass
-    return {"decision": d, "cfg": cfg, "recalled": recalled, "why": why}
+    return {"decision": d, "cfg": cfg, "recalled": recalled, "why": why, "evidence": ev}

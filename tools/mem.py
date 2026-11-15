@@ -41,7 +41,10 @@ AUDIENCES = {
 }
 KIND_AUDIENCE = {"fact": "wh-world", "state": "wh-world", "view": "wh-world",
                  "calibration": "wh-programs", "program": "wh-programs", "defect": "wh-programs",
-                 "hypothesis": "wh-lab", "lesson": "wh-lab", "result": "wh-lab"}
+                 "hypothesis": "wh-lab", "lesson": "wh-lab", "result": "wh-lab",
+                 # conclusions the lab publishes to the agents that build programs: a belief is an
+                 # untested claim, a measurement is a judged result, a rule binds every later reader
+                 "belief": "wh-programs", "measured": "wh-programs", "rule": "wh-programs"}
 _AUD_READY = False
 
 
@@ -113,11 +116,14 @@ def write(agent, kind, text, meta=None, id=None, wait=False, timestamp=None):
     return out
 
 
-def recall(agent, query, limit=8):
-    """Search the shared memory as `agent`. Returns [{text, author, kind, source_id}]."""
+def recall(agent, query, limit=8, as_of=None):
+    """Search the shared memory as `agent`. `as_of` (ISO time) reads the memory as it stood then.
+    Returns [{text, author, kind, source_id, occurred_at, superseded_at, excerpts}]."""
     assert agent in AGENTS, agent
-    r = requests.post(API + "/recall", headers=_headers(),
-                      json={"query": query, "identity": agent, "limit": limit}, timeout=60)
+    body = {"query": query, "identity": agent, "limit": limit}
+    if as_of:
+        body["queryTimestamp"] = as_of
+    r = requests.post(API + "/recall", headers=_headers(), json=body, timeout=60)
     r.raise_for_status()
     hits = []
     for res in r.json().get("results", []):
