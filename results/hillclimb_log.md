@@ -158,3 +158,9 @@ the camera faced the start. Fixed: they now use the heading accumulated from the
 Ruled out as bugs while checking: a missing WASD input (upstream sets it to None; the camera layer takes pose rays
 only); translation and rotation signs (derived from upstream's example trajectories: W +z, A -x, D +x, look right
 +yaw, look up +pitch, matching ours); step size (upstream's normalised W step is about 0.75, ours 1.0); intrinsics.
+
+### Modal budget from 02:40 (owner's limit: $250, assumed $4.50 per GPU-hour)
+
+| item | GPU-h | est. cost |
+|---|---|---|
+| sweeps 17, 18, 19 (already running at 02:40) | 11 | $50 |
