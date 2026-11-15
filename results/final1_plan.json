@@ -109,5 +109,21 @@
   "cap_gate": {
    "away": 0.1
   }
- }
+ },
+ "cfg": {
+  "prompt": "caption+objective",
+  "register": {
+   "gain": 8,
+   "when": "third person",
+   "replace": true
+  },
+  "anchor_stats": 0.5,
+  "cap_gate": {
+   "away": 0.1
+  },
+  "ret": {
+   "gain": 4
+  }
+ },
+ "note": "Part A (third-person interaction + insight) was launched at 03:07 with cfg_without_return_register; the return register does not apply to those cases, so both parts run the same program. Part B (first-person) launched at 03:20 with cfg."
 }

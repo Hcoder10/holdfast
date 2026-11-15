@@ -180,3 +180,20 @@ Still to check before the final run: caption gate + return register without came
 | Modal ledger | GPU-h | est. cost |
 |---|---|---|
 | sweep20 (8 cases, 4 GPUs) | 1.5 | $7 |
+
+### Caption gate with and without the return register (sweep20, 03:18)
+
+Seven out-of-sight cases, orchestrator's reading of frames: with the return register the subject on return is
+better on three (OE036 one man and dog further along; OE046 the box is still on the conveyor, moved on; OE019 ends
+on the street instead of inside a tram), worse on one (OE017 leaves the room during the turn), the same on three.
+Kept, at gain 4.
+
+### Final configuration (results/final1_plan.json), run once on the 95 held-out cases
+
+`{"prompt": "caption+objective", "register": {"gain": 8, "when": "third person", "replace": true},
+  "anchor_stats": 0.5, "cap_gate": {"away": 0.1}, "ret": {"gain": 4}}`
+
+| Modal ledger | GPU-h | est. cost |
+|---|---|---|
+| final1 part A (49 cases, 4 GPUs) | 3 | $13 |
+| final1 part B (46 cases, 6 GPUs) | 4 | $18 |
