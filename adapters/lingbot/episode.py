@@ -155,6 +155,7 @@ class Episode:
         self.turn_log = None          # frames of the turn in progress
         self.trust_command = False
         self.gains = []               # reliable achieved/commanded yaw ratios this episode
+        self.been_away = False        # has the starting view left the frame since we stood here
         self.prior_gain = ASSUMED_GAIN
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
@@ -230,6 +231,7 @@ class Episode:
         if move is not None:
             # a new standing point: rotational memory starts over from here
             self.last_turn = None
+            self.been_away = False
             self.yaw = self.pitch = self.level_pitch = 0.0
             if self.mem is not None:
                 self.mem.keys = []
@@ -262,6 +264,8 @@ class Episode:
                         f = (j + 1) / len(new)
                         self.mem.add(new[j], y0 + got[0] * f, p0 + got[1] * f,
                                      chunk=self.s.chunk_id - 1, direction=direction)
+        if move is None and not facing_start(self.yaw, self.pitch):
+            self.been_away = True
         self.records.append({"chunk": self.s.chunk_id - 1, "label": label,
                              "measured_yaw": my, "measured_pitch": mp, "inliers": n,
                              "guide_coverage": round(cover, 2), "reloc": reloc,
@@ -391,6 +395,15 @@ class Episode:
             self._agent_chunk(word)
         return False
 
+    def _maybe_settle(self):
+        """If the camera has been away and its measured heading is back at the start,
+        finish exactly on the starting orientation and hold. Triggered by geometry
+        only: the generator is never told that an episode is meant to return."""
+        y = (self.yaw + 180.0) % 360.0 - 180.0
+        if self.mode == "memory" and self.been_away and abs(y) < 8.0 and abs(self.pitch) < 8.0:
+            self._settle()
+            self.been_away = False
+
     def _gain(self):
         """Achieved / commanded rotation to assume when it cannot be measured."""
         if len(self.gains) >= 2:
@@ -458,10 +471,12 @@ class Episode:
                     tgt = 360.0 if tgt > 0 else -360.0
                 self._turn("yaw", tgt)
                 net_yaw += tgt
+                self._maybe_settle()
             elif kind in ("up", "down"):
                 tgt = (1 if kind == "up" else -1) * n * PITCH_PER_TOKEN
                 self._turn("pitch", tgt)
                 net_pitch += tgt
+                self._maybe_settle()
             elif kind == "wait":
                 reps = self.wait_chunks if (self.wait_chunks and len(plan) == 1) else n
                 for _ in range(reps):
@@ -481,8 +496,6 @@ class Episode:
         if returns_to_start:
             if self.mode == "closed":
                 self._reanchor()
-            if self.mode == "memory":
-                self._settle()
             final = self._return_check()
         if self.mode != "open" and "nomem" not in self.flags and len(self.gains) >= 3:
             write_gain(self.model_name, float(np.median(self.gains)), len(self.gains), case["task_id"])
