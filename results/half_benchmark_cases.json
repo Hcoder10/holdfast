@@ -42,17 +42,7 @@
    "IF023",
    "IF025",
    "IF026",
-   "IF028",
-   "IF029",
-   "IF032",
-   "IF033",
-   "IF036",
-   "IF040",
-   "IF042",
-   "IF043",
-   "IF044",
-   "IF047",
-   "IF052"
+   "IF028"
   ],
   "insight": [
    "OE002",
@@ -136,16 +126,6 @@
   "IF025",
   "IF026",
   "IF028",
-  "IF029",
-  "IF032",
-  "IF033",
-  "IF036",
-  "IF040",
-  "IF042",
-  "IF043",
-  "IF044",
-  "IF047",
-  "IF052",
   "OE002",
   "OE005",
   "OE006",
@@ -183,5 +163,6 @@
   "OE068",
   "OE069",
   "OE070"
- ]
+ ],
+ "note": "Interaction split cut from 25 to the first 15 drawn (alphabetical order of the draw) so that both arms fit the judging budget; decided before any of these cases was run."
 }
