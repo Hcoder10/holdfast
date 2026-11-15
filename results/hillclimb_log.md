@@ -45,3 +45,25 @@ gives an unchanged video the baseline's value. Against that:
 | 4: watchdog | 1.48 | 2.15 | 2.92 | 2.23 | 2.19 |
 
 Only trial 3's interaction gain (+1.5) is clearly outside the judge's noise.
+
+## Trials 1 and 5, all trials against the pooled baseline (23:20)
+
+`python -I -X utf8 loop/pool_baseline.py` (table in `runs/hillclimb/pooled_table.json`). "Changed" is the number of
+videos that differ from the baseline's; W/L counts changed videos more than 0.25 above or below it.
+
+| | GC | IF | IE | OE | overall | changed | W/L | verdict |
+|---|---|---|---|---|---|---|---|---|
+| baseline (pooled) | 1.85 | 2.15 | 3.10 | 2.23 | 2.33 | | | |
+| 1: step-0 Exa brief | 1.43 | 2.33 | 2.17 | 1.58 | 1.88 | 22 | 5/9 | rejected |
+| 2: memory+shadow+brief | 1.43 | 2.29 | 3.17 | 1.54 | 2.11 | 23 | 5/8 | rejected |
+| 3: caption+objective | 2.67 | 3.63 | 2.65 | 1.54 | 2.62 | 19 | 6/3 | incumbent |
+| 4: watchdog | 1.62 | 2.15 | 2.92 | 2.23 | 2.23 | 14 | 0/3 | rejected |
+| 5: caption+objective+memory | 1.83 | 2.60 | 2.58 | 1.00 | 2.00 | 20 | 6/7 | rejected |
+
+Lessons:
+- The step-0 brief does not help on its own; the interaction gain seen in trial 2 was not it.
+- Rotation memory does not add to the objective prompt. Its earlier "+0.3 on geometry" is within the judge's noise.
+- OE029 scored 5 in its single baseline judging and 1 in all four trials that changed its video. The baseline's
+  out-of-sight mean (2.23) leans on that one judging; every changed configuration sits near 1.0-1.6.
+- GC010's baseline video has now been judged 1.0, 5.0 and 4.2.
+- The one effect outside the noise remains: the objective in the prompt lifts interaction (2.15 to 3.63 and 2.60).
