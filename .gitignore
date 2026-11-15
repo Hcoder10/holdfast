@@ -11,3 +11,4 @@ runs/
 *.safetensors
 *.pt
 *.ckpt
+demo/*.mp4
