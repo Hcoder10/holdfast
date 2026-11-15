@@ -631,6 +631,11 @@ class Episode:
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
         s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho") if k in self.cfg}
+        st_cfg = self.cfg.get("steer") or {}
+        if "steps" in st_cfg:
+            s.tune["steer_steps"] = list(st_cfg["steps"])
+        if "cache" in st_cfg:
+            s.tune["steer_cache"] = bool(st_cfg["cache"])
         s.cond_writes = 0
         if self.cfg.get("guide_via"):
             self.guide_via = self.cfg["guide_via"]
@@ -693,7 +698,8 @@ class Episode:
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "cfg": self.cfg, "brief": self.brief,
-                "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes),
+                "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes,
+                             residual_writes=getattr(getattr(s, "probe", None), "writes", 0)),
                 "register": None if not self.register else dict(
                     self.register, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "watchdog": {"faults": sum(1 for w in self.watch if w.get("fault")),

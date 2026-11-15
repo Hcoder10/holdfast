@@ -22,12 +22,15 @@ class Probe:
         self.buf = {}
         self.steer = {}       # layer -> tensor [C]
         self.op, self.alpha = "add", 1.0
+        self.gate = True      # the stepper closes this for passes that should not be written to
+        self.writes = 0
         self.handles = [model.blocks[i].register_forward_hook(self._hook(i)) for i in self.layers]
 
     def _hook(self, i):
         def fn(module, inputs, out):
-            v = self.steer.get(i)
+            v = self.steer.get(i) if self.gate else None
             if v is not None:
+                self.writes += 1
                 v = v.to(device=out.device, dtype=out.dtype)
                 if self.op == "ablate":
                     # directional ablation: remove (a fraction of) the component along v

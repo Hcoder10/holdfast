@@ -505,7 +505,11 @@ class LingBotStepper:
     def _denoise(self, latent, kwargs, g, guide_from, guide_hard):
         p = self.pipe
         with torch.amp.autocast("cuda", dtype=p.param_dtype):
+            pr = getattr(self, "probe", None)
+            ss = self.tune.get("steer_steps")          # sampling steps that receive the residual write
             for i, t in enumerate(self.timesteps):
+                if pr is not None:
+                    pr.gate = ss is None or i in ss
                 if g is not None and i >= guide_from:
                     known = p.scheduler.add_noise(
                         g[0], torch.randn(g[0].shape, generator=self.gen, device=self.device,
@@ -532,9 +536,11 @@ class LingBotStepper:
             probe = getattr(self, "probe", None)
             if probe is not None:
                 probe.record = True
+                probe.gate = bool(self.tune.get("steer_cache", True))   # write during the cache pass?
             p.model(x=[x0], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
                     cross_attn_first_call=False, **kwargs)
             if probe is not None:
+                probe.gate = True
                 probe.record = False
                 a = probe.take()
                 if a is not None:
