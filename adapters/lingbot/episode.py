@@ -319,7 +319,13 @@ class Episode:
             self._step(f"{axis} rewind {per:+.1f}", rewind=(np.stack(imgs), np.stack(masks)),
                        **{axis: per})
         self.yaw, self.pitch = y_end, p_end
-        self.last_turn = None
+        keep = int(round((1.0 - share) * (L - 1)))
+        if keep > 12:   # part of the arc is still ahead: a further turn back can keep replaying it
+            done = lt["achieved"] * share
+            lt.update(frames=frames[:keep + 1], achieved=lt["achieved"] - done,
+                      target=lt["target"] - done, yaw1=y_end, pitch1=p_end)
+        else:
+            self.last_turn = None
 
     def _turn(self, axis, target_deg):
         """Rotate by target_deg about yaw or pitch."""
@@ -378,6 +384,11 @@ class Episode:
             axis = "yaw" if kind in ("left", "right") else "pitch"
             deg = (YAW_PER_TOKEN if axis == "yaw" else PITCH_PER_TOKEN) * (1 if kind in ("right", "up") else -1)
             lt = self.last_turn
+            if (self.mode == "memory" and lt is not None and lt["axis"] == axis
+                    and np.sign(deg) == -np.sign(lt["achieved"]) and len(lt["frames"]) > 12):
+                self._rewind(axis, float(np.sign(deg)) * min(abs(deg), abs(lt["achieved"])), 1)
+                self._maybe_settle()
+                return
             same = lt is not None and lt["axis"] == axis and np.sign(deg) == np.sign(lt["achieved"])
             if same:   # the agent is extending the turn just made: keep it rewindable
                 self.turn_log = lt["frames"]
@@ -390,6 +401,7 @@ class Episode:
                 lt["target"] += deg
                 lt["yaw1"], lt["pitch1"] = self.yaw, self.pitch
                 self.turn_log = None
+            self._maybe_settle()
         elif kind == "wait":
             self._step("agent WAIT")
         else:
