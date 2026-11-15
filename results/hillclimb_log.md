@@ -164,3 +164,19 @@ only); translation and rotation signs (derived from upstream's example trajector
 | item | GPU-h | est. cost |
 |---|---|---|
 | sweeps 17, 18, 19 (already running at 02:40) | 11 | $50 |
+
+### Combined validation on twelve first-person cases (sweep19, 03:05) and what was rejected at the end
+
+| write | what the frames show | verdict |
+|---|---|---|
+| caption gate (away 0.1) | OE044, OE053, OE046: distinct away views and a recognisable return (see sweep15). GC015: stays a coherent cabin interior where the control wanders outside. GC010, OE017: return as before | in the final configuration |
+| + camera guidance w = 3 | helps the cases it was built for (OE019: the red tram is kept; GC032: pan in place) but breaks cases that were fine: GC010 ends pressed against a wall and blurrier (sharpness 4.5 -> 3.0), OE017 and GC015 leave the room and end outdoors, OE044 loses sharpness (3.8 -> 2.5) | rejected: turns already execute at w = 1 and the extra push over-rotates |
+| + camera guidance w = 5 | chaotic on every case | rejected |
+| first frames' attention cut to 0.25 / 0.05, with and without camera guidance, and step 0.75 (sweep18) | GC026 (shopfront) and IF011 (Sphinx): no advance in any variant | hypothesis rejected; walking forward from a standing start on these scenes is unsolved |
+| keyframe arrival after the heading fix (sweep17) | fires on 2 of 6 cases (the player rarely returns to within a step of the start) | not in the final configuration |
+
+Still to check before the final run: caption gate + return register without camera guidance (sweep20).
+
+| Modal ledger | GPU-h | est. cost |
+|---|---|---|
+| sweep20 (8 cases, 4 GPUs) | 1.5 | $7 |

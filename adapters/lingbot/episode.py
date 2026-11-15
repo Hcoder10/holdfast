@@ -819,7 +819,7 @@ class Episode:
                 s.set_register(first_prompt, text, 0.01)
         self.cap_gate = None
         gc_ = self.cfg.get("cap_gate")
-        if gc_ and not self.register and (case.get("perspective") or "").strip().lower() != "third person":
+        if gc_ and not self.register and (case.get("perspective") or "").strip().lower() != "third person"                 and not (case.get("prompt") or "").lower().startswith("wait and observe"):   # still camera: nothing to gate
             # {"away": gain when turned fully away, "near": degrees up to which the gain stays 1,
             #  "far": degrees from which it is `away`}. The caption moves out of the base prompt
             #  into register 0; the base prompt is a neutral description of the surroundings.
