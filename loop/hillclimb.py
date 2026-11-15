@@ -63,6 +63,12 @@ ap.add_argument("--margin", type=float, default=0.15)
 ap.add_argument("--judge", default="google/gemini-3.1-pro-preview")
 ap.add_argument("--shards", type=int, default=6)
 ap.add_argument("--max_trials", type=int, default=30)
+# Manual mode: one trial with a configuration chosen by whoever is driving (no proposer or
+# critic model). Used when the orchestrating session makes the decisions itself.
+ap.add_argument("--cfg", default=None, help="JSON of knobs differing from the defaults")
+ap.add_argument("--hypothesis", default="")
+ap.add_argument("--id", type=int, default=None)
+ap.add_argument("--accept", type=int, default=None, help="mark trial N as the incumbent and exit")
 a = ap.parse_args()
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -323,6 +329,37 @@ if not MD.exists():
                   "already used). Differences are paired, against the baseline and against the incumbent at the "
                   "time.\n\n| # | time | configuration | hypothesis | vs baseline | by dimension | W/L | verdict | lesson |\n"
                   "|---|---|---|---|---|---|---|---|---|\n", encoding="utf8")
+
+if a.accept is not None:
+    for t in trials:
+        t["accepted"] = t.get("accepted") or t["id"] == a.accept
+    LOG.write_text("".join(json.dumps(t, ensure_ascii=False) + chr(10) for t in trials), encoding="utf8")
+    say(f"trial {a.accept} marked as incumbent")
+    sys.exit(0)
+if a.cfg:
+    cfg = dict(DEFAULT, **json.loads(a.cfg))
+    tid = a.id or (max([t["id"] for t in trials], default=0) + 1)
+    try:
+        mem.write("proposer", "hypothesis", f"trial {tid} hypothesis: {a.hypothesis} Configuration: {json.dumps(cfg)}",
+                  {"trial": tid, "by": "orchestrating session"})
+    except Exception:
+        pass
+    scores = run_trial(tid, cfg, cases)
+    trial = dict(id=tid, time=f"{dt.datetime.now():%H:%M}", cfg=cfg, hypothesis=a.hypothesis, by="orchestrating session",
+                 scores=scores, vs_base=compare(scores, base), vs_inc=compare(scores, inc_scores), accepted=False)
+    with open(LOG, "a", encoding="utf8") as f:
+        f.write(json.dumps(trial, ensure_ascii=False) + chr(10))
+    lines =[f"trial {tid} {json.dumps(cfg)}", f"hypothesis: {a.hypothesis}",
+             f"scored {len(scores)}/{len(cases)}; overall (mean of dimension means) {trial['vs_base']['score']}",
+             f"vs baseline: {json.dumps({k: v for k, v in trial['vs_base'].items() if k != 'pairs'})}",
+             f"vs incumbent: {json.dumps({k: v for k, v in trial['vs_inc'].items() if k != 'pairs'})}", ""]
+    for t, b, o in trial["vs_base"]["pairs"]:
+        lines.append(f"{t} ({dim(t)}) baseline {b} -> {o} gate={scores[t][2]} | {scores[t][1][:260]}")
+    (OUT / f"trial_{tid:02d}.txt").write_text(chr(10).join(lines), encoding="utf8")
+    say(f"trial {tid}: overall {trial['vs_base']['score']}; vs baseline {trial['vs_base']['mean_diff']:+.2f} "
+        f"{trial['vs_base']['by_dim']} W/L {trial['vs_base']['wins']}/{trial['vs_base']['losses']}; "
+        f"balance ${credit():.2f}")
+    sys.exit(0)
 
 end = dt.datetime.combine(dt.date.today() + dt.timedelta(days=1 if dt.datetime.now().hour >= 12 else 0),
                           dt.time(*map(int, a.until.split(":"))))
