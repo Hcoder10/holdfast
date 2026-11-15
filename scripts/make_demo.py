@@ -104,84 +104,73 @@ V = "runs/view/"
 SEGMENTS = [
     dict(asked="The character walks left into the pond.",
          left=("Unmodified model", V + "sweep2/lingbot2_14b_open_cap/IF006.mp4"),
-         right=("Objective register, 8x attention", V + "sweep2/lingbot2_14b_open_reg8/IF006.mp4"),
-         look="Same model, same seed. The objective gets its own cross-attention segment and 8x the attention. "
-              "Left: she walks past the pond. Right: she wades in.", seconds=11),
+         right=("Write 1: the request gets 8x the attention", V + "sweep2/lingbot2_14b_open_reg8/IF006.mp4"),
+         look="Same model, same seed. The request sits in its own cross-attention segment and is attended to 8 times as "
+              "strongly. Left: she walks past the pond. Right: she wades in.", seconds=11),
     dict(asked="The woman walks diagonally forward-right up the slope.",
-         left=("Objective in the prompt (normal strength)", V + "sweep2/lingbot2_14b_open_obj/IF009.mp4"),
-         right=("Objective register, 8x attention", V + "sweep2/lingbot2_14b_open_reg8/IF009.mp4"),
+         left=("Request in the prompt, normal strength", V + "sweep2/lingbot2_14b_open_obj/IF009.mp4"),
+         right=("Write 1: the request gets 8x the attention", V + "sweep2/lingbot2_14b_open_reg8/IF009.mp4"),
          look="Saying it in the prompt is not enough: she walks into a bush at the foot. With the register she climbs.",
-         seconds=11),
-    dict(asked="Turn the camera right 180 degrees, turn back, wait, turn left 90 degrees, turn back.",
-         left=("Unmodified model", V + "sweep19/lingbot2_14b_open_base/OE044.mp4"),
-         right=("Caption gate", V + "sweep19/lingbot2_14b_open_gate/OE044.mp4"),
-         look="The caption describes the starting view all episode, so the model paints tomatoes into every direction "
-              "and the judge reads the camera as never leaving. Gated by measured heading, the away views are just kitchen "
-              "and the cutting board comes back on return.", seconds=15),
-    dict(asked="Turn right 180 degrees, wait two seconds, then turn back to the original view.",
-         left=("Unmodified model", V + "sweep15/lingbot2_14b_open_base/OE053.mp4"),
-         right=("Caption gate", V + "sweep15/lingbot2_14b_open_gate0.1/OE053.mp4"),
-         look="Left: bakery in every direction, which reads as one endless pan. Right: a window and a wall while away, "
-              "the counter again on return.", seconds=12),
-    dict(asked="Walk forward, turn right 60 degrees, then turn back to the starting direction.",
-         left=("Unmodified model", V + "sweep10/lingbot2_14b_open_base/OE019.mp4"),
-         right=("Return register (Exa-sourced sentence)", V + "sweep10/lingbot2_14b_open_evo4/OE019.mp4"),
-         look="An agent asks Exa how far a streetcar moves in ten seconds and writes one sentence for the view on return. "
-              "It is silent while the camera is away and ramps in as it turns back. Left: the red tram is replaced by a modern one. "
-              "Right: the red tram, closer.", seconds=13),
+         seconds=10),
     dict(asked="Move along a rectangular path around the sculpture (30 seconds).",
          left=("Unmodified model", V + "sweep4/lingbot2_14b_open_none/GC002.mp4"),
-         right=("Latent re-anchoring", V + "sweep4/lingbot2_14b_open_anchor0.7/GC002.mp4"),
+         right=("Write 2: latents pulled back toward the first chunk", V + "sweep4/lingbot2_14b_open_anchor0.7/GC002.mp4"),
          look="Over 30 seconds the hall drifts from red to deep blue. Pulling each chunk's latent mean back toward the first "
               "chunk's holds the colours.", seconds=12),
+    dict(asked="Walk forward, look around to the right, walk forward, look around again (a cabin interior).",
+         left=("Without the shadow world", V + "sweep22/lingbot2_14b_open_base/GC015.mp4"),
+         right=("Write 3: shadow world, written back on return", V + "sweep22/lingbot2_14b_open_shadow/GC015.mp4"),
+         look="When the camera turns away, a copy of the model's whole state keeps running the view that was left. On return "
+              "the arriving frame is pinned to the copy's frame through the model's own conditioning input.", seconds=14),
+    dict(asked="Turn the camera right, then turn back to the original view (a western street).",
+         left=("Without the shadow world", V + "sweep22/lingbot2_14b_open_base/GC010.mp4"),
+         right=("Write 3: shadow world, written back on return", V + "sweep22/lingbot2_14b_open_shadow/GC010.mp4"),
+         look="Geometry on the held-out half: 2.48 without this write, 2.82 with it.", seconds=10),
     dict(asked="The woman walks forward to the base of the Great Sphinx.",
          left=("Unmodified model", V + "sweep18/lingbot2_14b_open_base/IF011.mp4"),
-         right=("Objective register, 8x attention", V + "sweep16/lingbot2_14b_open_reg8/IF011.mp4"),
-         look="Where it still breaks: from a standing start on a real photograph, nothing we tried makes her walk. "
-              "Register gain to 16, camera guidance, less attention to the first frames: no advance.",
+         right=("Request at 8x attention", V + "sweep16/lingbot2_14b_open_reg8/IF011.mp4"),
+         look="Where it still breaks: from a standing start on a real photograph, nothing we tried makes her walk. Attention "
+              "gain to 16, camera guidance, residual steering, motion written into the noise: no advance.",
          seconds=9, left_bad=False),
 ]
 
 
 def results_card():
-    p = os.path.join(ROOT, "results", "held_out.json")
-    if not os.path.exists(p):
-        return card([("Held-out half (95 cases, never used for development)", 34, True, FG),
-                     ("Gemini 3.1 Pro judging in progress when this was rendered", 28, False, DIM)], 6)
-    r = json.load(open(p))
-    a = r["arms"]
+    r = json.load(open(os.path.join(ROOT, "results", "full_benchmark.json")))
+    a, d = r["arms"], r["final_minus_baseline"]
+    v2 = json.load(open(os.path.join(ROOT, "results", "held_out_v2.json")))["arms"]["v2"]
 
     def row(name, t):
-        return f"{name}:  overall {t['overall']:.2f}   (geometry {t['GC']:.2f}, interaction {t['IF']:.2f}, " \
-               f"insight {t['IE']:.2f}, out-of-sight {t['OE']:.2f})"
-    d = r["paired"]["final_minus_baseline"]
-    return card([("Held-out half: 95 cases never used for development", 34, True, FG),
-                 (f"Gemini 3.1 Pro, PlayWorld's prompts, blinded, {r['passes']} judging passes averaged", 24, False, DIM),
-                 ("", 14, False, DIM),
+        return (f"{name}:  {t['overall']:.2f}   (geometry {t['GC']:.2f}, interaction {t['IF']:.2f}, "
+                f"insight {t['IE']:.2f}, out-of-sight {t['OE']:.2f})")
+    return card([("PlayWorld, all 171 cases. Judge: Gemini 3.1 Pro, blinded", 32, True, FG),
+                 ("", 12, False, DIM),
                  (row("Unmodified model", a["baseline"]), 25, False, FG),
-                 (row("Final state program", a["final"]), 25, True, ACC),
-                 ("Genie 3 (published, 171 cases):  overall 2.12   (2.74, 2.40, 1.51, 1.81)", 25, False, DIM),
-                 ("", 14, False, DIM),
-                 (f"Paired difference, final minus unmodified: {d['overall']:+.2f}  (95% interval {d['ci95'][0]:+.2f} to {d['ci95'][1]:+.2f})",
-                  26, False, FG)], 10)
+                 (row("Holdfast", a["final"]), 25, True, ACC),
+                 ("Genie 3 (published):  2.12   (geometry 2.74, interaction 2.40, insight 1.51, out-of-sight 1.81)", 25, False, DIM),
+                 ("", 12, False, DIM),
+                 (f"Holdfast minus unmodified, paired: {d['overall']:+.2f}  (95% interval {d['ci95'][0]:+.2f} to {d['ci95'][1]:+.2f})",
+                  25, False, FG),
+                 (f"With the shadow world, on the 95 held-out cases: {v2['overall']:.2f} (geometry {v2['by_dim']['GC']:.2f}). "
+                  "That arm was designed after the held-out result was known.", 23, False, DIM)], 11)
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="demo/worldhold_demo.mp4")
     a = ap.parse_args()
-    frames = card([("worldhold", 64, True, FG),
-                   ("How long can a generated world hold together while an agent plays in it?", 30, False, DIM),
+    frames = card([("Holdfast", 66, True, FG),
+                   ("state programs for a world model", 32, False, DIM),
                    ("", 16, False, DIM),
-                   ("LingBot-World 2 on PlayWorld, with a state program written into its forward pass.", 28, False, FG),
-                   ("No weights changed. Nothing trained.", 28, False, FG)], 6)
+                   ("LingBot-World 2 on the PlayWorld benchmark. A controller writes into the model's state", 27, False, FG),
+                   ("at three levels. No weights changed. Nothing trained.", 27, False, FG)], 6)
     for s in SEGMENTS:
         frames += segment(**s)
-    frames += card([("What the controller writes, every 0.75 s", 36, True, FG),
-                    ("cross-attention logits  ·  the caption's gain by measured heading  ·  latent statistics", 26, False, DIM),
+    frames += card([("Three writes, three levels of state", 36, True, FG),
+                    ("attention to text   |   latents carried forward   |   the conditioning input", 27, False, DIM),
                     ("", 14, False, DIM),
-                    ("Exa supplies what should have changed out of sight; past.dev keeps the facts, the sentences", 26, False, FG),
-                    ("and which program worked, behind three read boundaries.", 26, False, FG)], 7)
+                    ("Tested and dropped, with the evidence in the repo: residual steering, attention gain on the", 24, False, FG),
+                    ("first frames, a view bank, camera guidance, an object ledger, a launch-time planner, noise flow.", 24, False, FG)], 7)
     frames += results_card()
     out = os.path.join(ROOT, a.out)
     os.makedirs(os.path.dirname(out), exist_ok=True)
