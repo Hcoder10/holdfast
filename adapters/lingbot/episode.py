@@ -767,7 +767,8 @@ class Episode:
                     info = outsight.make(case, image, use_web=not rc.get("noweb"), use_memory=not rc.get("nomem"))
                 except Exception as e:
                     info = {"text": "", "source": "failed: " + repr(e)[:120]}
-                text = info.get("text") or (self.caption if rc.get("static_caption", True) else "")
+                # a static scene gets no return text: boosting the caption on return painted duplicates
+                text = info.get("text") or (self.caption if rc.get("static_caption", False) else "")
             elif mode_t == "caption":
                 text, info = self.caption, {"source": "caption"}
             self.ret = {"text": text, "info": info, "gain": float(rc.get("gain", 4.0)), "sink": rc.get("sink"),
@@ -837,7 +838,7 @@ class Episode:
                     "reads": self.bank["reads"]},
                 "ret": None if not getattr(self, "ret", None) else {
                     "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
-                    "sink": self.ret["sink"], "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
+                    "sink": self.ret["sink"], "bias_hits": __import__("sdpa_shim").BIAS_HITS, "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
                     "trace": self.ret["trace"]},
                 "sink_diag": list(__import__("sdpa_shim").SELF_DIAG),
                 "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes,

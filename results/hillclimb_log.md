@@ -102,3 +102,17 @@ Orchestrator's scores from frame strips (1-5, interaction rubric wording):
 | mean | 3.2 | 3.5 | 3.9 | 4.0 |
 
 Chosen for third-person cases: the objective in its own register at gain 8, caption as the base prompt.
+
+### Side memory sweeps (01:10-01:45)
+
+| sweep | write | what the frames show | verdict |
+|---|---|---|---|
+| sweep9 | self-attention gain 2-16 on the sink (first frames), applied (3,200+ calls logged) | indistinguishable from the control | no effect; diagnostic running |
+| sweep11 | heading-indexed latent bank written into half of the sink (29 views stored, 5 superseded, reads logged) | indistinguishable from the control | no effect through this route |
+| sweep10 | return register: Exa-sourced sentence for the state on return, silent while away, gain 4 or 8 on return | OE019: the red tram is back, closer, same colours (control: replaced by a modern tram). OE036: one man and dog further along (control and sink variants: a duplicate man). OE017, OE029: no change, no harm | keep (gain 4) |
+| sweep10 | caption re-asserted on return at gain 4 | duplicates: second dog and a new man, second locomotive, oversized apples | drop |
+| sweep12 | keyframe arrival through the image-condition channel | fires at 20 and 35 degrees tolerance. 35: cross-fade ghost. 20: clean arrival on the easy case | hard cases pending |
+
+Sentences written by the agents (cartographer: Exa question and fact; director: sentence), e.g. OE019: "The red
+streetcar with gold trim has moved significantly closer to the camera's position, now much nearer along the
+cobblestone street as it continues its approach down the tracks."
