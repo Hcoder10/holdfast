@@ -47,7 +47,7 @@ recalls earlier sessions from past.dev, patches one write and reruns) ran on six
 
 ## Links
 
-- Repository: https://github.com/Hcoder10/worldhold
+- Repository: https://github.com/Hcoder10/holdfast
 - Demo video: `demo/worldhold_demo.mp4` (90 seconds; rebuilt with `python -I -X utf8 scripts/make_demo.py`)
 - Results: `results/full_benchmark.json`, `results/held_out.json`, `results/held_out_v2.json`,
   `results/full_benchmark_v2.json`
