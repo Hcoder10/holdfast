@@ -76,7 +76,15 @@ def run_job(stepper, model, job, data, log=print, after_each=None):
                     import repair
                     res, frames = repair.run(make, stepper, case, img, job.get("seed", 0), vcfg, log=log)
                 else:
-                    res = make(vcfg).run(case, img, seed=job.get("seed", 0))
+                    ep = make(vcfg)
+                    res = ep.run(case, img, seed=job.get("seed", 0))
+                    if getattr(ep, "ledger", None) and ep.ledger.get("objects"):
+                        try:
+                            import ledger
+                            frames = stepper.video()
+                            res["ledger_check"] = ledger.check(case, img, frames, ep.ledger["objects"])
+                        except Exception as e:
+                            res["ledger_check"] = {"error": repr(e)[:160]}
             except Exception as e:  # one bad case must not sink the shard
                 import traceback
                 log(f"{task_id} {mode} FAILED {e!r}")

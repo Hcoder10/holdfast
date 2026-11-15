@@ -481,8 +481,15 @@ class LingBotStepper:
             # treat as "this frame is given". key = (latent [16,h,w], index of the frame in this
             # chunk). Only that frame is pinned; the others are free to travel to it.
             y = kwargs["y"][0].clone()
-            y[:4, key[1]] = 1.0
-            y[4:, key[1]] = key[0].to(device=y.device, dtype=y.dtype)
+            lat = key[0].to(device=y.device, dtype=y.dtype)
+            if len(key) > 2 and key[2] is not None:
+                # by region: only where the mask is 1 is the frame given; the rest is the model's to render
+                m = torch.as_tensor(key[2], device=y.device, dtype=y.dtype)
+                y[:4, key[1]] = m
+                y[4:, key[1]] = m * lat + (1 - m) * y[4:, key[1]]
+            else:
+                y[:4, key[1]] = 1.0
+                y[4:, key[1]] = lat
             kwargs["y"] = [y]
             self.cond_writes = getattr(self, "cond_writes", 0) + 1
         rho = float(self.tune.get("noise_rho", 0.0) or 0.0)

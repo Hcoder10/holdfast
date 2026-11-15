@@ -274,9 +274,11 @@ class Episode:
         if off > b["tol"] + 5.0:
             b["armed"] = True
         if b["armed"] and off <= b["tol"] and (yaw or pitch):
-            self._key = (b["shadow"]["latents"][-1][:, CHUNK - 1].clone(), CHUNK - 1)
+            self._key = (b["shadow"]["latents"][-1][:, CHUNK - 1].clone(), CHUNK - 1, getattr(self, "pin_mask", None))
             b["reads"].append({"at_chunk": s.chunk_id, "via": "shadow key", "offset_deg": round(off, 1),
-                               "unseen_chunks": b["shadow_n"]})
+                               "unseen_chunks": b["shadow_n"],
+                               "pinned_fraction": None if getattr(self, "pin_mask", None) is None
+                               else round(float(self.pin_mask.mean()), 2)})
             b["shadow"] = None
 
     def _moved(self, move):
@@ -853,8 +855,21 @@ class Episode:
                          "pos_tol": float(bc.get("pos_tol", 0.6)), "first": s.cond_lat[:, 0].clone(),
                          "shadow_on": bool(bc.get("shadow")), "shadow": None, "home": None, "shadow_n": 0,
                          "max_shadow": int(bc.get("max_shadow", 28)), "forks": 0, "dropped": 0, "shadow_total": 0}
+        self.ledger, self.pin_mask = None, None
+        lc = self.cfg.get("ledger")
+        first_person_motion = (case.get("perspective") or "").strip().lower() != "third person" and \
+            not (case.get("prompt") or "").lower().startswith("wait and observe")
+        if lc and first_person_motion:
+            import ledger
+            self.first_image = image
+            self.ledger = ledger.make(dict(case, image_caption=self.caption0), image,
+                                      use_web=not lc.get("noweb"), use_memory=not lc.get("nomem"))
+            if self.ledger["objects"] and any(o["kind"] != "static" for o in self.ledger["objects"]):
+                self.pin_mask = ledger.pin_mask(self.ledger["objects"], s.lat_h, s.lat_w)
         self.ret = None
         rc = self.cfg.get("ret")
+        if self.ledger is not None and self.ledger.get("sentence") and not rc:
+            rc = {"gain": float(lc.get("gain", 4.0)), "text": "ledger"}
         if rc and not self.register and not (case.get("prompt") or "").lower().startswith("wait and observe"):
             # {"gain": register gain on return, "sink": sink gain on return, "sink_away": sink gain
             #  while away, "text": "evolve" (sourced later-state sentence; the caption if the scene is
@@ -875,6 +890,8 @@ class Episode:
                 text = info.get("text") or (self.caption if rc.get("static_caption", False) else "")
             elif mode_t == "caption":
                 text, info = self.caption, {"source": "caption"}
+            elif mode_t == "ledger":
+                text, info = self.ledger["sentence"], {k: self.ledger.get(k) for k in ("entity", "url", "source", "question", "fact")}
             self.ret = {"text": text, "info": info, "gain": float(rc.get("gain", 4.0)), "sink": rc.get("sink"),
                         "sink_away": rc.get("sink_away", 1.0), "near_yaw": float(rc.get("near_yaw", 30.0)),
                         "near_pitch": float(rc.get("near_pitch", 20.0)), "away": 0, "back": 0, "trace": [],
@@ -955,6 +972,8 @@ class Episode:
                 "cap_gate": None if not getattr(self, "cap_gate", None) else dict(
                     self.cap_gate, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "plan": None if not self.plan else {k: self.plan[k] for k in ("decision", "why", "recalled")},
+                "ledger": None if self.ledger is None else dict(
+                    self.ledger, pinned_fraction=None if self.pin_mask is None else round(float(self.pin_mask.mean()), 2)),
                 "bank": None if not getattr(self, "bank", None) else {
                     "views": len(self.bank["views"]), "superseded": self.bank["superseded"],
                     "reads": self.bank["reads"], "forks": self.bank["forks"], "dropped": self.bank["dropped"],
