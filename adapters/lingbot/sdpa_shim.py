@@ -88,12 +88,16 @@ def install(force=False):
     `force` is not set. World-anchored cross-attention needs the shim."""
     import sys
     import wan.modules.attention as att
-    try:    # the cached self-attention calls `attention`; route it here so the sink gain can apply
-        import wan.modules.model_causal as mc
-        if not (att.FLASH_ATTN_2_AVAILABLE or att.FLASH_ATTN_3_AVAILABLE):
-            mc.attention = self_attention
-    except Exception:
-        pass
+    # The cached self-attention calls `attention` (SDPA when flash-attn is absent). Route it
+    # here in every model module that imported it, so the sink gain can apply.
+    import importlib
+    for name in ("wan.modules.model_causal", "wan.modules.model_fast"):
+        try:
+            mod = importlib.import_module(name)
+            if getattr(mod, "attention", None) is not None:
+                mod.attention = self_attention
+        except Exception:
+            pass
     if (att.FLASH_ATTN_2_AVAILABLE or att.FLASH_ATTN_3_AVAILABLE) and not force:
         return False
     att.flash_attention = sdpa_flash_attention
