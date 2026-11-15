@@ -755,7 +755,7 @@ class Episode:
     # -- episode -----------------------------------------------------------
     def run(self, case, image, seed=0):
         s = self.s
-        self.caption = case["image_caption"]
+        self.caption = self.caption0 = case["image_caption"]
         self.plan = None
         if "planner" in self.cfg and self.cfg["planner"] is not False:   # {} means "on with defaults"
             # launch-time decision model: a small LLM picks the state program for this task and scene
@@ -864,7 +864,11 @@ class Episode:
             if mode_t == "evolve":
                 import outsight
                 try:
-                    info = outsight.make(case, image, use_web=not rc.get("noweb"), use_memory=not rc.get("nomem"))
+                    # the scene agent is given the dataset's caption only. (In the reported runs it received
+                    # the caption with the objective appended, and on camera-instruction cases sometimes named
+                    # "camera rotation" as the thing in progress; see results/exa_sources_final.jsonl.)
+                    info = outsight.make(dict(case, image_caption=self.caption0), image,
+                                         use_web=not rc.get("noweb"), use_memory=not rc.get("nomem"))
                 except Exception as e:
                     info = {"text": "", "source": "failed: " + repr(e)[:120]}
                 # a static scene gets no return text: boosting the caption on return painted duplicates

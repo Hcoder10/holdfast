@@ -160,35 +160,47 @@ def methods():
     return out
 
 
+PW = ["https://kxding.github.io/project/PlayWorld/", "https://arxiv.org/abs/2608.13552",
+      "https://arxiv.org/html/2608.13552", "https://github.com/kxding/PlayWorld"]
 CLAIMS = [
-    ("PlayWorld reports Genie 3 at an overall score of 2.12", ["2.12"], "https://kxding.github.io/project/PlayWorld/"),
-    ("PlayWorld reports Matrix-Game-3.0 at an overall score of 1.14", ["1.14"], "https://kxding.github.io/project/PlayWorld/"),
-    ("PlayWorld has 171 cases across four dimensions", ["171"], "https://kxding.github.io/project/PlayWorld/"),
+    ("PlayWorld reports Genie 3 at an overall score of 2.12", ["2.12"], PW),
+    ("PlayWorld reports Matrix-Game-3.0 at an overall score of 1.14", ["1.14"], PW),
+    ("PlayWorld has 171 cases across four dimensions", ["171"], PW),
     ("Sparks of Weight-Space Programming: a 0.016% weight edit took Qwen3.5-0.8B from 7.9% to 48.1% on MATH-500",
-     ["0.016", "48.1"], "https://rikiyat.github.io/blog/weight-space-programming/"),
+     ["0.016", "48.1"], ["https://rikiyat.github.io/blog/weight-space-programming/"]),
 ]
 
 
 def claims():
-    urls = sorted({c[2] for c in CLAIMS})
-    d = exa_search._post("/contents", {"urls": urls, "text": {"maxCharacters": 60000}})
-    pages = {r.get("url", "").rstrip("/"): (r.get("text") or "") for r in d.get("results", [])}
-    exa_search._log({"op": "contents", "query": "claim check", "urls": urls,
-                     "cost": (d.get("costDollars") or {}).get("total"), "by": "scout"})
+    urls = sorted({u for c in CLAIMS for u in c[2]})
+    pages = {}
+    for u in urls:                      # one call per page, so one unreachable page does not sink the rest
+        try:
+            d = exa_search._post("/contents", {"urls": [u], "text": {"maxCharacters": 200000}})
+            for r in d.get("results", []):
+                pages[u] = r.get("text") or ""
+            exa_search._log({"op": "contents", "query": "claim check", "urls": [u],
+                             "cost": (d.get("costDollars") or {}).get("total"), "by": "scout"})
+        except Exception as e:
+            pages[u] = ""
+            exa_search._log({"op": "contents", "query": "claim check", "urls": [u], "error": repr(e)[:120], "by": "scout"})
     out = []
-    for claim, needles, url in CLAIMS:
-        text = pages.get(url.rstrip("/"), "")
-        found = {n: bool(re.search(re.escape(n), text)) for n in needles}
-        ctx = ""
-        for n in needles:
-            m = re.search(r".{0,90}" + re.escape(n) + r".{0,90}", text, re.S)
-            if m:
-                ctx = " ".join(m.group(0).split())
+    for claim, needles, cand in CLAIMS:
+        best = {"url": cand[0], "verdict": "page not retrieved", "context": "", "page_chars": 0}
+        for u in cand:
+            text = pages.get(u, "")
+            if not text:
+                continue
+            ok = all(re.search(r"(?<![0-9.])" + re.escape(n) + r"(?![0-9])", text) for n in needles)
+            m = re.search(r".{0,100}(?<![0-9.])" + re.escape(needles[0]) + r"(?![0-9]).{0,100}", text, re.S)
+            cur = {"url": u, "verdict": "supported" if ok else "not found on page",
+                   "context": " ".join(m.group(0).split()) if m else "", "page_chars": len(text)}
+            if ok or best["verdict"] == "page not retrieved":
+                best = cur
+            if ok:
                 break
-        verdict = "supported" if text and all(found.values()) else "page not retrieved" if not text else "not found on page"
-        out.append({"claim": claim, "url": url, "verdict": verdict, "found": found, "context": ctx,
-                    "page_chars": len(text)})
-        print(verdict, "|", claim)
+        out.append(dict(best, claim=claim, pages_tried=[u for u in cand if pages.get(u)]))
+        print(best["verdict"], "|", claim, "|", best["url"])
     (ROOT / "results" / "scout_claims.json").write_text(json.dumps(out, indent=1, ensure_ascii=False), encoding="utf8")
     return out
 

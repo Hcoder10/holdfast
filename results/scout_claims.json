@@ -1,43 +1,51 @@
 [
  {
+  "url": "https://arxiv.org/abs/2608.13552",
+  "verdict": "supported",
+  "context": "-- | --- | | grouplavender Closed-source Models | | | | | | | Genie 3 | 2.74 | 2.40 | 1.51 | 1.81 | 2.12 | | HappyOyster | 2.54 | 2.15 | 1.47 | 1.54 | 1.92 | | grouplavender Open-source Models | | | | | |",
+  "page_chars": 28133,
   "claim": "PlayWorld reports Genie 3 at an overall score of 2.12",
-  "url": "https://kxding.github.io/project/PlayWorld/",
-  "verdict": "not found on page",
-  "found": {
-   "2.12": false
-  },
-  "context": "",
-  "page_chars": 3416
+  "pages_tried": [
+   "https://kxding.github.io/project/PlayWorld/",
+   "https://arxiv.org/abs/2608.13552",
+   "https://arxiv.org/html/2608.13552",
+   "https://github.com/kxding/PlayWorld"
+  ]
  },
  {
+  "url": "https://arxiv.org/abs/2608.13552",
+  "verdict": "supported",
+  "context": "| HY-WorldPlay | 1.12 | 1.63 | 1.01 | 1.08 | 1.21 | | Matrix-Game-3.0 | 1.30 | 1.25 | 1.00 | 1.00 | 1.14 | Table 3: Trajectory-validation pass rates on the PlayWorld benchmark. The insight evolution dime",
+  "page_chars": 28133,
   "claim": "PlayWorld reports Matrix-Game-3.0 at an overall score of 1.14",
-  "url": "https://kxding.github.io/project/PlayWorld/",
-  "verdict": "not found on page",
-  "found": {
-   "1.14": false
-  },
-  "context": "",
-  "page_chars": 3416
+  "pages_tried": [
+   "https://kxding.github.io/project/PlayWorld/",
+   "https://arxiv.org/abs/2608.13552",
+   "https://arxiv.org/html/2608.13552",
+   "https://github.com/kxding/PlayWorld"
+  ]
  },
  {
-  "claim": "PlayWorld has 171 cases across four dimensions",
   "url": "https://kxding.github.io/project/PlayWorld/",
   "verdict": "supported",
-  "found": {
-   "171": true
-  },
-  "context": "n Tao · Pengfei Wan · Hengshuang Zhao Kuaishou Technology · The University of Hong Kong 171 Cases 1,417 Videos 10–60s Rollouts 9+ Models Paper GitHub Leaderboard Dataset ## Model",
-  "page_chars": 3416
+  "context": "n Gao · Xin Tao · Pengfei Wan · Hengshuang Zhao Kuaishou Technology · The University of Hong Kong 171 Cases 1,417 Videos 10–60s Rollouts 9+ Models Paper GitHub Leaderboard Dataset ## Model demos. Yo",
+  "page_chars": 3416,
+  "claim": "PlayWorld has 171 cases across four dimensions",
+  "pages_tried": [
+   "https://kxding.github.io/project/PlayWorld/",
+   "https://arxiv.org/abs/2608.13552",
+   "https://arxiv.org/html/2608.13552",
+   "https://github.com/kxding/PlayWorld"
+  ]
  },
  {
-  "claim": "Sparks of Weight-Space Programming: a 0.016% weight edit took Qwen3.5-0.8B from 7.9% to 48.1% on MATH-500",
   "url": "https://rikiyat.github.io/blog/weight-space-programming/",
   "verdict": "supported",
-  "found": {
-   "0.016": true,
-   "48.1": true
-  },
-  "context": "easoning loops that Qwen’s own model card warns about, and fixes this by natively editing 0.016% of the weights. With the same sampling settings, this weight correction raises MATH-500",
-  "page_chars": 36611
+  "context": "causing reasoning loops that Qwen’s own model card warns about, and fixes this by natively editing 0.016% of the weights. With the same sampling settings, this weight correction raises MATH-500 from 7.9%",
+  "page_chars": 36611,
+  "claim": "Sparks of Weight-Space Programming: a 0.016% weight edit took Qwen3.5-0.8B from 7.9% to 48.1% on MATH-500",
+  "pages_tried": [
+   "https://rikiyat.github.io/blog/weight-space-programming/"
+  ]
  }
 ]

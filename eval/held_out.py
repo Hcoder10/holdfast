@@ -36,7 +36,7 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         "sw21": {"baseline": "sweep21:lingbot2_14b_open_base", "alive": "sweep21:lingbot2_14b_open_alive03",
                  "final": "sweep21:lingbot2_14b_open_planner"},
         # the planner-chosen program on the 95 held-out cases, against the arms already judged there
-        "v2": {"baseline": "base95", "final": "final2"},
+        "v2": {"final": "final2"},
         # the planner arm of the 21-case test, run again after a bug left it switched off the first time
         "sw21b": {"final": "sweep21b:lingbot2_14b_open_planner"},
         # shadow world on 11 turn-and-return cases: base, static pin to the first frame ("alive" slot), shadow world

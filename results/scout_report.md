@@ -78,7 +78,7 @@ Other results returned: [LiveWorld: Simulating Out-of-Sight Dynamics in Generati
 
 | Claim | Verdict | Text found | Source |
 |---|---|---|---|
-| PlayWorld reports Genie 3 at an overall score of 2.12 | not found on page |  | https://kxding.github.io/project/PlayWorld/ |
-| PlayWorld reports Matrix-Game-3.0 at an overall score of 1.14 | not found on page |  | https://kxding.github.io/project/PlayWorld/ |
-| PlayWorld has 171 cases across four dimensions | supported | n Tao · Pengfei Wan · Hengshuang Zhao Kuaishou Technology · The University of Hong Kong 171 Cases 1,417 Videos 10–60s Rollouts 9+ Models Paper GitHub Leaderboar | https://kxding.github.io/project/PlayWorld/ |
-| Sparks of Weight-Space Programming: a 0.016% weight edit took Qwen3.5-0.8B from 7.9% to 48.1% on MATH-500 | supported | easoning loops that Qwen’s own model card warns about, and fixes this by natively editing 0.016% of the weights. With the same sampling settings, this weight co | https://rikiyat.github.io/blog/weight-space-programming/ |
+| PlayWorld reports Genie 3 at an overall score of 2.12 | supported | -- | --- | | grouplavender Closed-source Models | | | | | | | Genie 3 | 2.74 | 2.40 | 1.51 | 1.81 | 2.12 | | HappyOyster | 2.54 | 2.15 | 1.47 | 1.54 | 1.92 | |  | https://arxiv.org/abs/2608.13552 |
+| PlayWorld reports Matrix-Game-3.0 at an overall score of 1.14 | supported | | HY-WorldPlay | 1.12 | 1.63 | 1.01 | 1.08 | 1.21 | | Matrix-Game-3.0 | 1.30 | 1.25 | 1.00 | 1.00 | 1.14 | Table 3: Trajectory-validation pass rates on the Play | https://arxiv.org/abs/2608.13552 |
+| PlayWorld has 171 cases across four dimensions | supported | n Gao · Xin Tao · Pengfei Wan · Hengshuang Zhao Kuaishou Technology · The University of Hong Kong 171 Cases 1,417 Videos 10–60s Rollouts 9+ Models Paper GitHub  | https://kxding.github.io/project/PlayWorld/ |
+| Sparks of Weight-Space Programming: a 0.016% weight edit took Qwen3.5-0.8B from 7.9% to 48.1% on MATH-500 | supported | causing reasoning loops that Qwen’s own model card warns about, and fixes this by natively editing 0.016% of the weights. With the same sampling settings, this  | https://rikiyat.github.io/blog/weight-space-programming/ |
