@@ -12,3 +12,4 @@ runs/
 *.pt
 *.ckpt
 demo/*.mp4
+results/venue/

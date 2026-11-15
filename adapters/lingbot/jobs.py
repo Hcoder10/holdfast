@@ -48,8 +48,13 @@ def all_cases(data):
 
 def run_job(stepper, model, job, data, log=print, after_each=None):
     for task_id in job["cases"]:
-        split, case = find_case(data, task_id)
-        img = Image.open(image_for(data, split, case))
+        custom = (job.get("custom") or {}).get(task_id)
+        if custom:        # a case that is not in the benchmark: our own image, caption, request and actions
+            case = dict(custom, task_id=task_id)
+            img = Image.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "results", custom["image"]))
+        else:
+            split, case = find_case(data, task_id)
+            img = Image.open(image_for(data, split, case))
         # "variants": {tag: cfg} runs several configurations in one job (one model load);
         # each lands in its own folder <model>_<mode>_<tag>.
         variants = job.get("variants") or {"": job.get("cfg")}
