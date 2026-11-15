@@ -256,11 +256,20 @@ class Episode:
         will be looking. Away from the start view both are quiet; once the camera has
         been away and is turning back onto the start view they ramp in. The base prompt
         never changes, so nothing arrives as a prompt switch."""
+        ty = (self.yaw + yaw + 180.0) % 360.0 - 180.0
+        tp = self.pitch + pitch
+        cg = getattr(self, "cap_gate", None)
+        if cg:
+            # The caption describes the starting view. Its attention gain follows how far the
+            # camera has turned from that view, so its subject is free to leave the frame.
+            off = max(abs(ty), 1.5 * abs(tp))
+            f = min(1.0, max(0.0, (off - cg["near"]) / max(1e-6, cg["far"] - cg["near"])))
+            g = float(np.exp(f * np.log(cg["away"])))
+            self.s.register_gains[0] = g
+            cg["trace"].append(round(g, 3))
         r = getattr(self, "ret", None)
         if not r:
             return
-        ty = (self.yaw + yaw + 180.0) % 360.0 - 180.0
-        tp = self.pitch + pitch
         near = abs(ty) < r["near_yaw"] and abs(tp) < r["near_pitch"]
         if not near:
             r["away"] += 1
@@ -270,11 +279,17 @@ class Episode:
         back = r["away"] >= 2 and near
         if r.get("text"):
             g = r["gain"]
-            self.s.register_gain = 0.01 if not back else (g ** 0.5 if r["back"] == 1 else g)
+            g = 0.01 if not back else (g ** 0.5 if r["back"] == 1 else g)
+            if self.s.register_gains is not None:
+                self.s.register_gains[r["slot"]] = g
+            else:
+                self.s.register_gain = g
         if r.get("sink"):
             self.s.tune["sink_gain"] = (r["sink"] if back else r.get("sink_away", 1.0))
         r["trace"].append({"chunk": self.s.chunk_id, "target_yaw": round(ty, 1), "target_pitch": round(tp, 1),
-                           "back": back, "register_gain": round(float(self.s.register_gain), 3),
+                           "back": back, "register_gain": round(float(
+                               self.s.register_gains[r["slot"]] if self.s.register_gains is not None
+                               else self.s.register_gain), 3),
                            "sink_gain": self.s.tune.get("sink_gain", 1.0)})
 
     # -- low level ---------------------------------------------------------
@@ -744,7 +759,9 @@ class Episode:
             self.memory_entries = recall_entries(case["task_id"])
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
-        s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho") if k in self.cfg}
+        s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho", "cam_gain") if k in self.cfg}
+        if getattr(s, "camguide", None) is not None:
+            s.camguide.calls = 0
         _shim = __import__("sdpa_shim")
         _shim.SELF_DIAG_ON, _shim.SELF_DIAG = bool(self.cfg.get("sink_diag")), []
         st_cfg = self.cfg.get("steer") or {}
@@ -785,9 +802,24 @@ class Episode:
                 text, info = self.caption, {"source": "caption"}
             self.ret = {"text": text, "info": info, "gain": float(rc.get("gain", 4.0)), "sink": rc.get("sink"),
                         "sink_away": rc.get("sink_away", 1.0), "near_yaw": float(rc.get("near_yaw", 30.0)),
-                        "near_pitch": float(rc.get("near_pitch", 20.0)), "away": 0, "back": 0, "trace": []}
-            if text:
+                        "near_pitch": float(rc.get("near_pitch", 20.0)), "away": 0, "back": 0, "trace": [],
+                        "slot": 0}
+            if text and not self.cfg.get("cap_gate"):
                 s.set_register(first_prompt, text, 0.01)
+        self.cap_gate = None
+        gc_ = self.cfg.get("cap_gate")
+        if gc_ and not self.register and (case.get("perspective") or "").strip().lower() != "third person":
+            # {"away": gain when turned fully away, "near": degrees up to which the gain stays 1,
+            #  "far": degrees from which it is `away`}. The caption moves out of the base prompt
+            #  into register 0; the base prompt is a neutral description of the surroundings.
+            self.cap_gate = {"away": float(gc_.get("away", 0.15)), "near": float(gc_.get("near", 25.0)),
+                             "far": float(gc_.get("far", 60.0)), "trace": []}
+            texts, gains = [first_prompt], [1.0]
+            if self.ret and self.ret.get("text"):
+                texts.append(self.ret["text"])
+                gains.append(0.01)
+                self.ret["slot"] = 1
+            s.set_registers(gc_.get("base", NEUTRAL_AWAY), texts, gains)
         if self.anchor:
             s.set_anchored(self.timeline.spec["away_prompt"],
                            [first_prompt] + [m["text"] for m in self.memory_entries])
@@ -845,6 +877,8 @@ class Episode:
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "cfg": self.cfg, "brief": self.brief,
+                "cap_gate": None if not getattr(self, "cap_gate", None) else dict(
+                    self.cap_gate, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "bank": None if not getattr(self, "bank", None) else {
                     "views": len(self.bank["views"]), "superseded": self.bank["superseded"],
                     "reads": self.bank["reads"]},
@@ -853,6 +887,7 @@ class Episode:
                     "sink": self.ret["sink"], "bias_hits": __import__("sdpa_shim").BIAS_HITS, "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
                     "trace": self.ret["trace"]},
                 "sink_diag": list(__import__("sdpa_shim").SELF_DIAG),
+                "cam_guided_calls": getattr(getattr(s, "camguide", None), "calls", 0),
                 "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes,
                              residual_writes=getattr(getattr(s, "probe", None), "writes", 0)),
                 "register": None if not self.register else dict(

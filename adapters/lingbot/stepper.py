@@ -160,14 +160,24 @@ class LingBotStepper:
         gain can be ramped, so a write need not arrive as an abrupt prompt switch."""
         self.set_anchored(base_prompt, [text])
         self.register_gain = float(gain)
+        self.register_gains = None
+
+    def set_registers(self, base_prompt, texts, gains):
+        """Several text registers after `base_prompt`, each with its own gain
+        (`register_gains`, changeable at any chunk)."""
+        self.set_anchored(base_prompt, list(texts))
+        self.register_gains = [float(g) for g in gains]
+        self.register_gain = self.register_gains[0]
 
     def _cross_bias(self):
-        g = float(getattr(self, "register_gain", 1.0) or 1.0)
-        if g == 1.0 or not getattr(self, "regional", None) or not getattr(self, "spans", None):
+        if not getattr(self, "regional", None) or not getattr(self, "spans", None):
             return None
-        a, b = self.spans[0]
+        gains = list(getattr(self, "register_gains", None) or [float(getattr(self, "register_gain", 1.0) or 1.0)])
+        if all(g == 1.0 for g in gains):
+            return None
         bias = torch.zeros(512, dtype=torch.float32, device=self.device)
-        bias[a:b] = float(np.log(max(g, 1e-4)))
+        for (a, b), g in zip(self.spans, gains):
+            bias[a:b] = float(np.log(max(g, 1e-4)))
         return bias
 
     def _cross_mask(self, region):
@@ -188,6 +198,7 @@ class LingBotStepper:
     def reset(self, image, prompt, seed=0):
         """Start an episode from a PIL image and a text prompt."""
         self.register_gain = 1.0
+        self.register_gains = None
         # state-write knobs, set by the episode from its cfg (all off by default):
         #   anchor_stats  pull each chunk's per-channel latent mean this far back to chunk 0's
         #   sink_gain     self-attention gain on the episode's first frames
@@ -494,6 +505,13 @@ class LingBotStepper:
         if getattr(self, "regional", None) and region is not None:
             sdpa_shim.CROSS_MASK = self._cross_mask(region)
         sdpa_shim.CROSS_BIAS = self._cross_bias()
+        cg = float(self.tune.get("cam_gain", 1.0) or 1.0)
+        if cg != 1.0 or getattr(self, "camguide", None) is not None:
+            if getattr(self, "camguide", None) is None:
+                import camguide
+                self.camguide = camguide.CamGuide(self.pipe.model)
+                self.camguide.prepare(self._plucker(np.stack([np.eye(4)] * CHUNK)), self.pipe.param_dtype)
+            self.camguide.w = cg
         sg = float(self.tune.get("sink_gain", 1.0) or 1.0)
         sdpa_shim.SELF_SINK = None if sg == 1.0 else (self.sink_frames * self.frame_seqlen, float(np.log(sg)))
         try:
