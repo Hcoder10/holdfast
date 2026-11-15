@@ -48,7 +48,7 @@ Which clip should be kept? Judge, in this order of importance:
 4. Do things keep moving and progressing plausibly, with real accumulated change, rather than a frozen picture, a
    motion repeated in place, or objects melting and morphing?
 5. Do subjects and objects keep their identity, and is the picture clean?
-Reply with JSON: {{"keep": one of {labels}, "ranking": [labels from best to worst], "why": one sentence}}"""
+Reply with the JSON object only, no analysis before it: {{"keep": one of {labels}, "ranking": [labels from best to worst], "why": one sentence}}"""
 
 
 def block(path, width):
@@ -66,10 +66,21 @@ def ask(content, model):
         try:
             r = requests.post("https://api.anthropic.com/v1/messages", timeout=180,
                               headers={"x-api-key": llm._key(), "anthropic-version": "2023-06-01"},
-                              json={"model": model, "max_tokens": 300, "system": SYSTEM,
+                              json={"model": model, "max_tokens": 1500, "system": SYSTEM,
                                     "messages": [{"role": "user", "content": content}]})
             last = r.json()["content"][0]["text"]
-            return json.loads(re.search(r"\{.*\}", last, re.S).group(0))
+            objs = re.findall(r"\{[^{}]*\}", last, re.S)          # the model may reason first; the verdict is the last object
+            for o in reversed(objs):
+                try:
+                    v = json.loads(o)
+                    if "keep" in v:
+                        return v
+                except Exception:
+                    pass
+            m = re.search(r'"keep"\s*:\s*"?([A-C])', last)
+            if m:
+                return {"keep": m.group(1), "why": last[-160:]}
+            raise ValueError("no verdict in reply")
         except Exception as e:
             last = repr(e)[:200] + " " + str(getattr(r, "text", ""))[:200] if "r" in dir() else repr(e)[:200]
             time.sleep(3 + 4 * k)

@@ -1,0 +1,722 @@
+{
+ "split": "dev",
+ "model": "claude-sonnet-5-5",
+ "arms": [
+  "baseline",
+  "final"
+ ],
+ "cases": 76,
+ "critic_failed": [
+  "GC009",
+  "GC025",
+  "GC036",
+  "GC047",
+  "IF025",
+  "OE046"
+ ],
+ "kept": {
+  "baseline": 35,
+  "final": 35
+ },
+ "kept_the_best_scoring_clip": 55,
+ "tables": {
+  "unmodified": {
+   "GC": 2.3,
+   "IF": 2.433,
+   "IE": 2.4,
+   "OE": 1.455,
+   "overall": 2.147,
+   "n": 76,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 15,
+    "IE": 15,
+    "OE": 22
+   }
+  },
+  "final": {
+   "GC": 2.417,
+   "IF": 2.445,
+   "IE": 2.667,
+   "OE": 1.818,
+   "overall": 2.337,
+   "n": 76,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 15,
+    "IE": 15,
+    "OE": 22
+   }
+  },
+  "critic_pick": {
+   "GC": 2.217,
+   "IF": 2.467,
+   "IE": 2.667,
+   "OE": 1.602,
+   "overall": 2.238,
+   "n": 76,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 15,
+    "IE": 15,
+    "OE": 22
+   }
+  },
+  "oracle_pick": {
+   "GC": 2.817,
+   "IF": 2.916,
+   "IE": 2.867,
+   "OE": 2.045,
+   "overall": 2.661,
+   "n": 76,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 15,
+    "IE": 15,
+    "OE": 22
+   }
+  }
+ },
+ "pick_minus_final": {
+  "n": 76,
+  "by_dim": {
+   "GC": -0.2,
+   "IF": 0.022,
+   "IE": 0.0,
+   "OE": -0.216
+  },
+  "overall": -0.098,
+  "ci95": [
+   -0.288,
+   0.084
+  ],
+  "wins": 6,
+  "losses": 9
+ },
+ "pick_minus_unmodified": {
+  "n": 76,
+  "by_dim": {
+   "GC": -0.083,
+   "IF": 0.033,
+   "IE": 0.267,
+   "OE": 0.148
+  },
+  "overall": 0.091,
+  "ci95": [
+   -0.13,
+   0.318
+  ],
+  "wins": 17,
+  "losses": 11
+ },
+ "picks": {
+  "GC002": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A keeps a stable scene and its camera path covers the strafe, forward, left, back and return, ending near the starting view with consistent statues; Clip B drifts into an increasingly blue, color"
+  },
+  "GC005": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A walks forward to the horse, circles around it and the statue, and ends near the pedestal, so the camera visibly moves through the commanded actions; Clip B only drifts forward and downward to a"
+  },
+  "GC008": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Neither clip cleanly walks forward 5 steps, tilts up 30\u00b0, then tilts back down, but B at least ends with a view of the storefront at roughly the original height, while A never returns and ends inside "
+  },
+  "GC009": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5WbYGbQj7U3WwY6uJ1L\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQSpg0KEAgTGAI4AUIIdGhpb"
+  },
+  "GC010": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Both clips turn right about 90 degrees and then turn back to the starting street view, but B's building sign and neighboring buildings change as it turns, while A's sign stays stable and the same stru"
+  },
+  "GC015": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A walks forward a little, turns right through the cabin, and ends on a view that resembles the starting room, while Clip B drifts into a different-looking interior with a sofa, door and TV that d"
+  },
+  "GC016": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "In B the camera moves forward behind the man, who walks toward the pagoda, and then tilts up to the sky and trees, matching w*10 then u*4; in A the camera closes in on the man's head and then tilts up"
+  },
+  "GC021": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A walks forward past the first statue and then rotates horizontally in place through the statues, the columns, and the base of a column, while the scene stays consistent. Clip B tilts and drifts "
+  },
+  "GC023": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A backs out of the living room, pauses, walks back in, and then turns through the room, keeping the same marble wall, teal chairs, sofas and TV consistent on return. Clip B leaves through a door "
+  },
+  "GC025": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5Wbb3nLKjEL32mkVThc\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQS2w4KEAgTGAI4AUIIdGhpb"
+  },
+  "GC026": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips push in toward the entrance and then back out, but B shows a clearer forward-then-back progression, with the storefront staying consistent and the ground and reflections developing plausibl"
+  },
+  "GC027": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A pans steadily through a full rotation, with a coherent structure and umbrellas, and ends near a yellow slide structure, though it does not clearly return to the pink building. Clip B shifts to "
+  },
+  "GC028": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips start with the same forward walk and then a left turn toward a wall, but B shows a clearer turn into a new view of the corridor and a short forward walk afterward, while A's turn ends facin"
+  },
+  "GC029": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Clip B stays in place and turns steadily through a wide arc, so it reads as a rotation, while Clip A drifts forward along a path through a park and ends on a different view, which is a walk and not a "
+  },
+  "GC031": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B pans smoothly through a full 360\u00b0 and ends facing the original signpost, fork and white bench, so the scene returns consistently. Clip A turns through different scenes, adds people who appear a"
+  },
+  "GC032": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Neither clip clearly completes a 360\u00b0 in-place rotation back to the original view, but A pans steadily around the scene and ends on a plausible bridge walkway, while B drifts into a forward-moving wal"
+  },
+  "GC033": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Both clips turn left and then return to the display window, but A keeps the stone wall, purple flower decoration and hanging lights consistent on the return, while B's wall decoration morphs into a di"
+  },
+  "GC036": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5WcpKGZ1v9kv6HW7uBt\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQSuxMKEAgTGAI4AUIIdGhpb"
+  },
+  "GC038": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B turns right toward the fireplace, walks to it, turns back left and ends facing the interior with the bed, which roughly matches the commanded sequence, though it then drifts outside and the sce"
+  },
+  "GC039": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Neither clip returns to the windmill view, but B sweeps through more varied surroundings and ends nearer a full loop with cleaner, more consistent imagery."
+  },
+  "GC040": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A pans right about 90 degrees and then pans back to the starting view, and the tents, chair and person look the same on return, though the beach scene shifts slightly. Clip B pans right and bring"
+  },
+  "GC042": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A turns left and then returns to essentially the original car-and-mural view, while Clip B moves along the car and ends on a different, smaller light-blue car, so the return and the subject's ide"
+  },
+  "GC047": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5Wdpgd7cueH2gsKRYUT\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQSjhcKEAgTGAI4AUIIdGhpb"
+  },
+  "GC048": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A turns continuously in place through the water and the pier, then returns to a view of the Pearl Tower on the skyline, which is close to a full rotation. Clip B drifts as if walking along a brid"
+  },
+  "IF004": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Both clips drive forward past the STOP sign and then swing right, but A keeps the scene more coherent and stays closer to the commanded sequence, while B drifts into a blue car body filling the view a"
+  },
+  "IF006": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In Clip B the character visibly walks left and ends up standing in the pond, while in Clip A the character moves away from the pond and the camera drifts toward a tower, so the request is not carried "
+  },
+  "IF007": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips push the camera forward along the boardwalk with the boy ahead, but B shows more accumulated change (railings, dune plants and the beach change progressively) and the boy's walking gait is "
+  },
+  "IF009": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B shows the camera following the woman as she turns diagonally right and climbs the slope and stairs, with real accumulated progress. Clip A shows only a slow lateral drift past a nearly unchange"
+  },
+  "IF011": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "In both clips the camera follows the woman only slightly, but B shows a bit more forward progress, with her getting a little smaller and closer to the Sphinx, while A looks nearly static with her in t"
+  },
+  "IF013": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "In A the camera moves forward (w) and the boat visibly travels across the river toward the opposite shore, with the foreground snow receding and the cabins getting closer, whereas in B the scene is es"
+  },
+  "IF014": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In B the camera moves forward, turns right and moves forward again, following the orange car as it drives forward and turns at the intersection. The car stays recognizable and the street stays consist"
+  },
+  "IF015": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "In A the camera moves steadily forward (w*8) while following the red-coat woman, and she walks up to the hot dog cart with consistent scenery; in B a man in a blue puffer jacket blocks the view, the w"
+  },
+  "IF016": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B follows the commanded sequence: the character walks forward to the fence, climbs over and drops down, then keeps walking toward the village with a steady camera and a consistent character. Clip"
+  },
+  "IF019": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips show forward riding, a sideways step, a right turn toward the building, and a final forward move, but B's progression is longer and clearer: it advances past the pole, turns right, and then"
+  },
+  "IF021": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In B the camera follows the waiter forward, the tree passes and the scene changes, and the waiter's tray and appearance stay consistent; in A the scene also advances but the waiter looks smaller and t"
+  },
+  "IF023": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips show the woman walking away along the path with the camera following. In B the scenery changes steadily, with the fence on the left and the path ahead sliding past in a way that suggests fo"
+  },
+  "IF025": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5Wf6ShC7iiaBDTeLjiC\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQSkw8KEAgTGAI4AUIIdGhpb"
+  },
+  "IF026": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In B the camera moves forward with the woman up the steps, the scene changes steadily, and her hand visibly trails along the rope handrail, while A shows her mostly static in frame with little visible"
+  },
+  "IF028": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B shows the horse galloping and the camera moving forward and turning left through wooden archways, so it follows the commanded w/a sequence and the rider visibly moves; Clip A mostly sits in nea"
+  },
+  "OE002": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "The command was a single wait, so the camera should stay still. Clip A holds a stable viewpoint while the girl keeps feeding the goat carrot pieces. Clip B has the goat turn away and stretch sideways,"
+  },
+  "OE005": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips keep the camera still as commanded, but B shows continuous plausible motion (children walking, a youth crossing the frame, a second walker entering) while A's group mostly stands still and "
+  },
+  "OE006": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Both clips hold the camera still as commanded, but A keeps a natural scene and the customer visibly goes on to bag the vegetables, while B drifts into a heavy blue color cast, with a hand turning mage"
+  },
+  "OE008": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Both clips open identically on the same scene, and both then drift into close-ups of passing pedestrians instead of holding a still, observing view as 'wait' requires; A keeps its framing slightly ste"
+  },
+  "OE009": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips hold the camera still as commanded, but B shows more varied pedestrian traffic and a changing scene, while A's frames show repeated pedestrians, a woman in white who stays frozen in place, "
+  },
+  "OE010": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Both clips hold the camera still as commanded, but B shows steady, plausible progression (pedestrians, then cars driving through the crosswalk) with a clean, natural-color picture, whereas A drifts in"
+  },
+  "OE011": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Both clips hold the camera still as commanded, but B shows steadier scene progression (a customer walking through, items changing on the counter) with the scene staying consistent, while A has a large"
+  },
+  "OE013": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips hold the camera still as commanded, but B shows steadier, plausible progress (pineapple cut, then a pepper opened into a clean flower-like cross-section), while A's pineapple chunk morphs i"
+  },
+  "OE017": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips turn left and come back, but B returns to the table with the apple and railings from the start, while A ends in front of a different white building."
+  },
+  "OE019": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Both clips walk forward toward the tram, but neither shows a clean 60\u00b0 right turn followed by a return to the starting direction. A ends on a different building facade with the tram gone and a blurred"
+  },
+  "OE020": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips hold a static first-person camera as commanded, but B keeps traffic and cyclists moving and changing plausibly, while A's cars and cyclist morph and look less stable."
+  },
+  "OE028": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A tilts upward to a dark starry sky as commanded and then steps back, with the launch tower entering the frame from below; Clip B shows the shuttle and tower in a different, rotated configuration"
+  },
+  "OE029": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A shows a gradual turn to the right, a forward walk past the locomotive that keeps the '5917' engine and red-trimmed cars consistent, and then a hold; Clip B turns too, but the locomotive and sce"
+  },
+  "OE032": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips show the same opening (a long static launch view, then a tilt up), but B's upward tilt is clearer and the shuttle keeps its identity and accumulates real motion. In A the shuttle gets stuck"
+  },
+  "OE036": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips tilt up to the sky and come back down, but B returns to the same road and trees, with the man and dog in the same arrangement as the opening. In A, the return view differs: the dog is left "
+  },
+  "OE037": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B turns right to the dark room, turns back to the same tabletop scene with the board, bowl, tomato and garlic, then pulls back, while Clip A's return view is a different, distorted scene with a c"
+  },
+  "OE040": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "The command was a single wait, so the camera should stay essentially still; Clip A holds a mostly stable view while a person walks into frame, sits and drinks, which is plausible observed progression,"
+  },
+  "OE043": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips move left and then return to the start, but B's sideways travel is larger and its final frames match the opening view, while A's movement is smaller and its return is less clearly complete."
+  },
+  "OE044": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A turns right to a door and wall, comes back to the cutting scene, then shows a left turn toward the kitchen counter; Clip B keeps turning into new areas and ends in a different kitchen with no r"
+  },
+  "OE045": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A turns right and back with a coherent camera, and the runner, track and wall stay consistent when it returns, while Clip B drifts into a different place (a building interior) and morphs the wall"
+  },
+  "OE046": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5Wiy9GBS4mvZzuz3rS8\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQSgBAKEAgTGAI4AUIIdGhpb"
+  },
+  "OE048": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Both clips pan right and then return to the coffee machine, but B's pan reaches the open window and its return view matches the start (cup, plant, tray), while A's pan scene contradicts itself, with a"
+  },
+  "OE050": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B turns left toward the fence, moves forward, then turns back to face the track, though it ends with a car driving away; Clip A shows a car-following shot that never clearly turns 90\u00b0 left and dr"
+  },
+  "OE052": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Clip A shows a right pan that follows the train and then a return toward the track and signals, with a coherent scene and train identity; Clip B drifts into close-ups of undercarriage and bogies with "
+  },
+  "OE053": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A turns right to a window view, holds there, then turns back to the original queue and counter; Clip B keeps rotating through different scenes and never returns to the starting view."
+  },
+  "OE056": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Both clips pan left, but neither clearly returns to the original view; B moves further right at the end and shows a coherent scene with a plausible purple precipitate, while A ends on a different, mes"
+  },
+  "OE057": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip B turns away to the left, holds on a view of many cupcakes, then turns back to the baker piping a cupcake with the original board and fruit visible, so the return is clear. Clip A pans past the o"
+  },
+  "OE060": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Both clips drift sideways with the glass leaving frame and then return, but B passes through a dark sleeve and fabric close-up and ends on a changed view with a dark door and a different wall, so it d"
+  },
+  "OE061": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "Both clips pan right, hold on the person's torso, and pan back to the canvas, but A returns to nearly the original framing and keeps the scene consistent, while B's return view looks different (the ca"
+  },
+  "OE063": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips hold the camera still as commanded, but in B the truck keeps its box-truck shape and visibly drives down the spiral, while in A the truck's shape drifts and looks less stable."
+  },
+  "OE066": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Both clips hold the camera still as commanded, but B shows more plausible progress: the piping bag moves between shells, the red filling is deposited and changes from shell to shell, whereas A drifts "
+  },
+  "OE068": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A pans left about 180 degrees through the store and then pans back to the escalator, ending on the original view. In Clip B the camera tracks the walking woman sideways through the store and neve"
+  },
+  "OE069": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A turns left, sweeps the escalator passage, and returns to the original view with the two people on the escalator in the same place; Clip B drifts into new people and a different scene, never cle"
+  },
+  "OE070": {
+   "order": [
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A turns left about 180 degrees to face the elevator wall and then turns back to the original escalator view, though the figure on the escalator is small and no longer visible at the end. Clip B n"
+  },
+  "OE071": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "The command was a single wait, so the camera should stay put and observe; A's viewpoint stays mostly steady early on, while B quickly cuts to repeated close-ups of cars with the scene changing erratic"
+  },
+  "OE072": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Both clips hold the camera still as commanded, but B shows the man steadily tearing the flatbread into smaller pieces, while A repeats a cycle of tearing, holding the bread up, and nearly eating it, a"
+  },
+  "OE073": {
+   "order": [
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "The command was a single wait, so the camera should stay essentially still while the vendor keeps working; Clip A holds a stable framing with the vendor steadily scooping and filling containers, while"
+  }
+ }
+}

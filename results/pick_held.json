@@ -1,0 +1,968 @@
+{
+ "split": "held",
+ "model": "claude-sonnet-5-5",
+ "arms": [
+  "baseline",
+  "objective",
+  "final"
+ ],
+ "cases": 95,
+ "critic_failed": [
+  "IF031",
+  "OE001",
+  "OE059"
+ ],
+ "kept": {
+  "baseline": 14,
+  "objective": 41,
+  "final": 37
+ },
+ "kept_the_best_scoring_clip": 51,
+ "tables": {
+  "unmodified": {
+   "GC": 2.396,
+   "IF": 1.89,
+   "IE": 2.193,
+   "OE": 1.921,
+   "overall": 2.1,
+   "n": 95,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 35,
+    "IE": 15,
+    "OE": 21
+   }
+  },
+  "final": {
+   "GC": 2.479,
+   "IF": 2.236,
+   "IE": 2.473,
+   "OE": 2.06,
+   "overall": 2.312,
+   "n": 95,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 35,
+    "IE": 15,
+    "OE": 21
+   }
+  },
+  "critic_pick": {
+   "GC": 2.679,
+   "IF": 2.214,
+   "IE": 2.347,
+   "OE": 2.345,
+   "overall": 2.396,
+   "n": 95,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 35,
+    "IE": 15,
+    "OE": 21
+   }
+  },
+  "oracle_pick": {
+   "GC": 3.3,
+   "IF": 2.589,
+   "IE": 2.647,
+   "OE": 2.743,
+   "overall": 2.82,
+   "n": 95,
+   "n_by_dim": {
+    "GC": 24,
+    "IF": 35,
+    "IE": 15,
+    "OE": 21
+   }
+  }
+ },
+ "pick_minus_final": {
+  "n": 95,
+  "by_dim": {
+   "GC": 0.2,
+   "IF": -0.021,
+   "IE": -0.127,
+   "OE": 0.286
+  },
+  "overall": 0.084,
+  "ci95": [
+   -0.059,
+   0.22
+  ],
+  "wins": 20,
+  "losses": 12
+ },
+ "pick_minus_unmodified": {
+  "n": 95,
+  "by_dim": {
+   "GC": 0.283,
+   "IF": 0.325,
+   "IE": 0.153,
+   "OE": 0.424
+  },
+  "overall": 0.296,
+  "ci95": [
+   0.033,
+   0.566
+  ],
+  "wins": 32,
+  "losses": 17
+ },
+ "picks": {
+  "GC001": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip C moves toward the table, sweeps around it, and ends back on the original view of the room with the table and rug in place. Clip B follows a similar path but ends close to the table and never ret"
+  },
+  "GC003": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "Clip C turns left, walks forward, turns right, walks, then turns right again to end looking back at the island, and the elephant and zebra stay consistent; Clip B has similar structure but the elephan"
+  },
+  "GC004": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "Clip A never returns: it strafes right until the windmill leaves the frame and ends on a different view, so it fails the main requirement. B and C both shift right and come back, but B's return matche"
+  },
+  "GC006": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip A circles the fountain and ends facing the fountain from a similar vantage, while B drifts into close-ups and a water-reflection view and C leaves the fountain behind and ends at a railing, so ne"
+  },
+  "GC007": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A walks forward to the Primemall entrance and then comes back out with the entrance still in view, matching w*16 then s*16 best; B keeps going deep inside the mall and never returns to the start,"
+  },
+  "GC011": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "Clip C moves forward, turns right toward the porch door, continues, then turns back and returns to a consistent view of the entry with the console, mirror and door intact; A and B drift into wall clos"
+  },
+  "GC012": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "All three clips walk forward past the dining table and then turn left toward the sofa, but C holds the scene together best: the sofa stays in view, the room layout stays consistent, and the final fram"
+  },
+  "GC013": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "All three clips begin on a seaside-cliff view rather than the described sofa scene, and each turns left then comes back; C returns to the cliff view with the same layout and a bird, with the cleanest "
+  },
+  "GC014": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "All three clips walk forward and then turn right, but B turns and settles on a consistent view of the bed, door and curtain, while C ends on a blank wall and bed with less context, and A turns toward "
+  },
+  "GC017": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "All three walk forward down the alley and then pan right. C and A turn toward the courtyard with the arched doorway, and C's scene keeps its identity most cleanly (vines, arches, potted plants), while"
+  },
+  "GC018": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "All three clips walk forward past the parked car and then turn. B and C match the command best: B's walk is clear, and its turn ends on a clean, consistent view of the road behind with the car out of "
+  },
+  "GC019": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip B turns about 180\u00b0 right to empty tracks, walks forward along them, then turns back left toward the locomotive and fence, which matches the commanded sequence best; A and C lose the scene consist"
+  },
+  "GC020": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "In all three clips the camera drifts leftward and the scene shifts, but none returns cleanly to the start; C keeps the most consistent scene and bicycle identity, B's bicycle changes color and an extr"
+  },
+  "GC022": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "B completes a full rotation, passes through a recognizable blue-tiled domed building and the pool, and ends facing the original mausoleum view with the pool and minarets intact; C also returns but pas"
+  },
+  "GC024": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip A moves forward past the hot dog stand with the two women still in view, then reverses back toward the crossing, which matches w*8 then s*8. Clip B drifts into a parked car and then changes into "
+  },
+  "GC030": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "B and C both make a full clockwise rotation and end on the original view of the bridge, but B keeps the Opera House and bridge consistent while turning, and C has only a weaker Opera House appearance "
+  },
+  "GC034": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "All three clips open with the same forward walk and a rightward turn, but only C ends on a believable close forward view of the gate; B ends on a different scene (a bench and archway, with no clear re"
+  },
+  "GC035": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip C is a first-person view whose camera turns in place and ends facing the original red-arch street view, with the character in the same spot. Clips A and B both stay in third person with the chara"
+  },
+  "GC037": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "All three clips turn left past 90\u00b0 and return to the start, but B returns to the same kitchen (window, pendant lights, wooden counter, glass sign) with the most consistent contents; A also returns but"
+  },
+  "GC041": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "All three tilt down to the hedge and then return to the Eiffel Tower view; C tilts down to the hedge base and a blue edging, stays clean and consistent, and returns to the same scene, whereas B invent"
+  },
+  "GC043": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip A turns left, walks toward the flag-lined building, turns back toward the tower and walks toward it, so the return view matches the start; B turns left but then drifts into a tree close-up and ne"
+  },
+  "GC044": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "B turns about 360\u00b0 and ends facing the mural again, though the scene changes along the way; A also turns around and ends on a different brick storefront with a mural-like figure; C drifts into an enti"
+  },
+  "GC045": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "Clip B makes a steady sideways move with the Pleasure Pier arch staying consistent, and the later sheets show a small, plausible shift, though it doesn't clearly return to the start. Clip A drifts for"
+  },
+  "GC046": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "Clip C walks toward the sculptures and then rotates through a sweeping turn while staying at one spot, keeping the figures and buildings consistent; Clip A turns around the statues but drifts, and Cli"
+  },
+  "IF001": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "In B the camera advances through the shelter and the woman walks into it, sitting on the seats area and continuing forward with consistent scenery, while A's woman and scene morph (the woman fades/blu"
+  },
+  "IF002": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In C the camera moves forward steadily and the man visibly walks toward the cabinets, with a clear change of scene across the sheets; B moves forward but with less progress, and A stays essentially fr"
+  },
+  "IF003": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip B turns left toward the red barbecue storefront, walks up to it, and passes through the glass door into the interior; the turn is clear and the approach is continuous. Clip A turns and moves alon"
+  },
+  "IF008": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In all three clips the camera follows the girl as she walks straight down the hallway, but C shows the most accumulated forward progress: the mural shifts from 'YOU!' to a cropped 'YOU' and the doors "
+  },
+  "IF010": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A shows the robot dog turning left and then walking steadily straight away from the camera through a consistent factory, keeping its identity as a quadruped, though it ends up looking like a corg"
+  },
+  "IF012": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "All three clips show the same forward walk toward the lamp with similar camera progress, but B keeps Lumine's white dress and the scene cleanest and most consistent, while A and C show slightly more c"
+  },
+  "IF017": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "In B the hero turns away and walks forward through the clouds the whole way with a steady third-person follow, whereas C does the same but ends on a rocky ledge that reappears and so looks less consis"
+  },
+  "IF020": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Only C shows a clear forward camera move (w*8) with the girl walking down toward the lake and the balustrade shifting past; B advances only slightly and A is nearly static with no visible progress."
+  },
+  "IF022": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "In B the camera moves forward the farthest, closing in on the gazebo and railings while the woman keeps walking with a steady identity; C also advances but shows slightly more distortion, and A advanc"
+  },
+  "IF024": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "In B the camera turns right (d*4), then moves forward (w*8) behind the man as he walks off the path into the tall plants, and he stays consistent; C ends with the man walking away to the upper right t"
+  },
+  "IF027": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip B moves the character forward toward the enemy and shows an actual encounter, with the enemy rushing in and fighting at close range, while keeping the same character and canyon setting. Clip A wa"
+  },
+  "IF029": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "In C the camera turns left (four \u2190) to face the road, then moves forward behind the woman, who walks across the road with a stable look, a consistent setting, and a clean picture. A does something sim"
+  },
+  "IF030": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "Clip C shows the man walking forward along the walkway with the camera following, then stepping and dropping down to lower ground in a consistent scene; Clip A also moves but the scene changes drastic"
+  },
+  "IF031": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5WdQ7WV7bwk7yVQqsN5\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQS4xAKEAgTGAI4AUIIdGhpb"
+  },
+  "IF032": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Only in A does the boy run toward the dog, with the camera moving forward behind him as commanded (w*8); in B and C the dog runs away from the boy, the boy disappears from view, and the camera trails "
+  },
+  "IF033": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "In C the arm reaches the handle and the drawer visibly opens with consistent scene identity; A shows the arm barely moving and the drawer never opening, while B morphs the arm and scene chaotically an"
+  },
+  "IF034": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip A moves forward toward the robot, which then picks up the metal bowl and holds it in its hands; Clip C goes forward and the bowl ends up inside the robot's casing with odd hand and scene changes;"
+  },
+  "IF035": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "A and C both move the camera forward along the alley while the woman keeps walking ahead, and C stays slightly cleaner and more consistent; B introduces a new woman with a backpack who appears from no"
+  },
+  "IF036": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "In A and B the camera moves forward (w*6) while the boy walks into the water, but B keeps the boy's clothing consistent and the picture clean, whereas A's shorts shift in color and the boy looks less "
+  },
+  "IF037": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "Clip B follows the commanded camera path (forward, then a rightward pan past the elevator panel), keeps the man's identity, and shows him interacting with the elevator; Clip A's man changes identity f"
+  },
+  "IF038": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In C the camera moves forward (w), the man walks along the wall and then jumps off, and the scene and his identity stay consistent, although the end is cluttered by tree branches. A shows a jump but t"
+  },
+  "IF040": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip C turns left toward the bushes, then the man visibly pushes through the tall green bushes into an orchard while the camera follows him walking forward; Clip B turns left but the man ends up walki"
+  },
+  "IF041": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip B shows the woman walking forward, turning left toward the benches and sitting on a bench, with the camera following and the scene staying consistent; Clip C also ends with her sitting, but the c"
+  },
+  "IF042": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "B shows the camera moving steadily forward behind a man who visibly walks forward, with consistent buildings and a clean picture, whereas A and C turn the scene into repeated jumping and floating with"
+  },
+  "IF043": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "In A the camera moves forward steadily and the man is shown skateboarding forward, with the board visible under him in several frames; C shows similar forward motion but the board appears to detach an"
+  },
+  "IF044": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Only A has the camera follow the walking woman forward, moving from the platform toward the track bed with real accumulated change; B and C keep her at a fixed screen position while a train streams pa"
+  },
+  "IF045": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip B shows the most accumulated forward camera movement, with the cliff edge and sea surface growing larger and the woman drifting slightly down in frame, which fits 'w*10' (forward) and her walking"
+  },
+  "IF046": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "In B the boy wades steadily forward until the water reaches his thighs and the bucket is submerged, which shows the clearest accumulated progress in walking straight ahead, while C progresses similarl"
+  },
+  "IF047": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "In B the girl clearly walks forward past the skateboard and keeps going down the road, with the camera following (w*10) and consistent scenery; C also advances past the board but the girl looks larger"
+  },
+  "IF048": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "baseline",
+   "why": "In all three clips the camera pans and moves left with the woman, who walks left toward the fence; A keeps the cleanest, most consistent scene, while B and C show more fence clutter and distortion, wi"
+  },
+  "IF049": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "Clip A turns the camera right to follow the girl and then walks forward steadily, with the girl and her net staying consistent and the image clean. Clip B drifts into distorted, over-saturated rock te"
+  },
+  "IF050": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "In B the man turns away and walks forward carrying the hoe, with a visible stride and the camera following; A does the same but the walking looks slightly more repetitive and the scene barely changes;"
+  },
+  "IF051": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "In C the camera moves steadily forward (w*8) and the woman walks toward the boat, ending beside it with the scene consistent throughout; A also advances but the woman climbs onto the boat, which goes "
+  },
+  "IF052": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "In all three clips the camera pushes forward past the grill toward the shelter, but C goes furthest, with the boy clearly walking away and the shelter growing larger across the full sequence. A and B "
+  },
+  "IF053": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A moves the camera forward (w*8) and shows the man standing and walking away along a path, though the scene shifts a lot; B swaps the man's clothes and ends in fabric texture, and C turns into a "
+  },
+  "OE001": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5WfRsj7nDSgSjxoo23v\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQSjAwKEAgTGAI4AUIIdGhpb"
+  },
+  "OE003": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "All three keep the camera still as commanded, but B shows steady writing with the pen moving and new text accumulating and no glitches, while A and C show a hand lift-off and a repeated motion in plac"
+  },
+  "OE004": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "B and C are identical in the sheets, with a steady camera and the girl continuing to blow bubbles that accumulate plausibly. A drifts: the girl turns away from the camera, the shirt text and pattern c"
+  },
+  "OE007": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "The command was only 'wait', so the camera should stay put; B stays essentially fixed, with the horses and wagon continuing to move, while A and C (the same footage) drift into a close-up of a horse a"
+  },
+  "OE012": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "The command is 'wait', so the camera should stay still while the scene keeps progressing; A and C hold the camera fixed, while B's customers and scene drift and change identity (masks appear, people s"
+  },
+  "OE014": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "Clip A pans left away from the hand along the arm to a water jar, then pans back to the paper and palette, so the turn and return are both clear and the scene stays consistent. Clip B also turns and r"
+  },
+  "OE015": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "Clip A turns left about 90\u00b0 to a painting of the autumn tree and tower, then turns back to the same view of the hand and drawing, with the scene staying consistent; Clip B turns much farther than 90\u00b0 "
+  },
+  "OE016": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "A pans left to the room and window and then pans back to the same desk, hands, notebook and paper stack; B turns left but the scene changes to an outdoor table and the stack's binding changes; C pans "
+  },
+  "OE018": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "The camera is commanded to wait, and all three clips hold a static viewpoint; B is the most continuous, with the kettle and pour progressing smoothly and the water clearing gradually. A and C are iden"
+  },
+  "OE021": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "B moves forward continuously, passing vehicles and settling behind a flatbed truck with the road ahead, and its objects stay mostly consistent; C moves forward but a truck turns into a different blue "
+  },
+  "OE022": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "The command was a single wait with the camera still, yet in all three clips a brown cow walks toward the viewer and the shot ends on a close-up of a cow's body; Clip B and Clip C are identical, while "
+  },
+  "OE023": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "The command was 'wait' (camera stays still), and all three clips show the same first-person static view with riders passing; B continues with varied, progressing traffic (new riders, a yellow-jersey c"
+  },
+  "OE024": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "Clip A pans right in one continuous sweep and ends back on the wall, with the man and the 'Vict' lettering still plausible (the writing does degrade into smeared marks), so it is the closest to a 360\u00b0"
+  },
+  "OE025": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "The camera holds still as commanded in all three clips, but B shows the most progression: ducks and a swan cross the river, the water's color changes gradually, and the scene stays clean and consisten"
+  },
+  "OE026": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "Clip A turns left to the barn door and fence, turns back to the woman and girl, then steps backward to a wider view of the same barn and scene; Clips B and C drift into new scenes (a girl at a goat pe"
+  },
+  "OE027": {
+   "order": [
+    "final",
+    "objective",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "Clip A turns left away from the start, then comes back to a similar scene (two jets on the runway, the lead one lifting off), though it ends with a blue nose intruding and a few inconsistencies. Clip "
+  },
+  "OE030": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "All three clips pan down and tilt back up to the garage, but C keeps the SUV and surroundings most consistent, with a clear descent, a clean top-down view of the SUV, and a faithful return, while B tu"
+  },
+  "OE031": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip C pans steadily through the kitchen and ends back at the dining table with the dog, completing a full rotation with a consistent room; B pans around the kitchen but never returns to the table, an"
+  },
+  "OE033": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "B steps the camera right in four stages, and the rhino keeps walking, then disappears behind the fence with the scene staying consistent; A drifts to a fence-only view and the rhino reappears from the"
+  },
+  "OE034": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip C pans right and then pans back, ending on a view close to the start with the zebras grouped by the fence, though it drifts a little; B ends on a different, closer cluster of zebras, and A ends o"
+  },
+  "OE035": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "final",
+   "why": "The camera holds still in all three clips, as 'wait' requires, but only B shows the workers visibly lifting and carrying the drying frames with real accumulated change; A and C show little progress, a"
+  },
+  "OE038": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "The command was a single wait, so the camera should stay put and observe. All three clips start with the same dog trotting toward the camera and then show the dog right up close, but only C keeps the "
+  },
+  "OE039": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip A turns right through a full rotation and ends with the dog in a chair and a view receding, which is closest to the request, though the dog's identity and the room change across the turn. Clip B "
+  },
+  "OE041": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip C turns right to the plate and window, holds still for the wait, then pans back to the tomato and cleaver, which matches the commanded turn-wait-return best, while A is messy and B adds unrelated"
+  },
+  "OE042": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "objective",
+   "why": "Clip C turns away to an empty room (a brick wall and a window), holds there, and then turns back to the matchsticks on the plank. The return is roughly the same place, though the matches have multipli"
+  },
+  "OE047": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "final",
+   "why": "Clip C turns right to the black door, turns back to the original escalator view with the same room, and then looks up at the wall and ceiling, so all three commanded steps are visible; B also turns ri"
+  },
+  "OE049": {
+   "order": [
+    "baseline",
+    "final",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "Clip A turns left to the shelves, then pans back to the original wall with the boy at the same place and a drawing that fits. The wall has the same room, though the drawing differs somewhat. Clip C tu"
+  },
+  "OE051": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip B pans left to follow the rider, then pans back to the original track view. The scene stays consistent, with the same track, flags and crowd, and a second motorcycle appears, though the return vi"
+  },
+  "OE055": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "Clip B is the only one that ends close to the starting view: the camera slides right past the beaker, the wrist and strap come into frame, and the beaker with the dye reappears. Clip C shifts right an"
+  },
+  "OE058": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "Clip A pans right about 180\u00b0 to a Christmas tree and kitchen, then pans back to the original board with the person piping, and the scene stays mostly consistent; Clip B pans away but returns to a chan"
+  },
+  "OE059": {
+   "order": [
+    "baseline",
+    "objective",
+    "final"
+   ],
+   "keep": null,
+   "why": "KeyError('text') {\"model\":\"claude-sonnet-5-5\",\"id\":\"msg_011Ch5WiQCrXRpo12fM6BiWM\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\",\"signature\":\"CAQSkBUKEAgTGAI4AUIIdGhpb"
+  },
+  "OE062": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "baseline",
+   "why": "C turns right, holds, and returns to a pour into a glass cup, though the scene is somewhat inconsistent. B turns right but ends on a different scene, a dark pot on a stove. A turns right and pauses, b"
+  },
+  "OE064": {
+   "order": [
+    "final",
+    "baseline",
+    "objective"
+   ],
+   "keep": "baseline",
+   "why": "All three clips hold a first-person view and show the cook working the meat, but A's framing and background drift most and its meat looks less consistent, while B and C are nearly identical and B is m"
+  },
+  "OE065": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "objective",
+   "why": "The camera should stay still for 'wait and observe'. A and C hold a steady view, but C looks identical to A, so I could not tell them apart and placed A first by default. In B the camera drifts and th"
+  },
+  "OE067": {
+   "order": [
+    "objective",
+    "baseline",
+    "final"
+   ],
+   "keep": "objective",
+   "why": "Clip A turns left about 180 degrees, then pans back and ends on the stairway with the girl and the red-bordered sign, so the place and subject are consistent; Clip C turns but never shows the girl aga"
+  },
+  "OE074": {
+   "order": [
+    "objective",
+    "final",
+    "baseline"
+   ],
+   "keep": "final",
+   "why": "The camera was only told to wait, and in all three clips it holds a fixed first-person view; B is the only one with substantial progression, as the man keeps eating and a second person's arm in a yell"
+  }
+ }
+}
