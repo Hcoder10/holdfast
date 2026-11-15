@@ -21,13 +21,20 @@ class Probe:
         self.record = False
         self.buf = {}
         self.steer = {}       # layer -> tensor [C]
+        self.op, self.alpha = "add", 1.0
         self.handles = [model.blocks[i].register_forward_hook(self._hook(i)) for i in self.layers]
 
     def _hook(self, i):
         def fn(module, inputs, out):
             v = self.steer.get(i)
             if v is not None:
-                out = out + v.to(device=out.device, dtype=out.dtype)
+                v = v.to(device=out.device, dtype=out.dtype)
+                if self.op == "ablate":
+                    # directional ablation: remove (a fraction of) the component along v
+                    u = v / (v.norm() + 1e-6)
+                    out = out - self.alpha * (out @ u).unsqueeze(-1) * u
+                else:
+                    out = out + v
             if self.record:
                 self.buf[i] = out.detach().float().mean(dim=1)[0].cpu()
             return out
@@ -39,9 +46,14 @@ class Probe:
         self.buf = {}
         return out
 
-    def set_steer(self, vectors, alpha=1.0):
-        """vectors: {layer: 1-D array}; alpha scales all of them. Empty dict clears."""
-        self.steer = {int(k): torch.as_tensor(v, dtype=torch.float32) * float(alpha) for k, v in vectors.items()}
+    def set_steer(self, vectors, alpha=1.0, op="add", layers=None):
+        """vectors: {layer: 1-D array}. op "add": add alpha * vector to the block output.
+        op "ablate": remove alpha of the output's component along the vector (alpha 1 =
+        full directional ablation). `layers` restricts to some blocks. Empty dict clears."""
+        self.op, self.alpha = op, float(alpha)
+        scale = float(alpha) if op == "add" else 1.0
+        self.steer = {int(k): torch.as_tensor(v, dtype=torch.float32) * scale for k, v in vectors.items()
+                      if layers is None or int(k) in layers}
 
     def remove(self):
         for h in self.handles:

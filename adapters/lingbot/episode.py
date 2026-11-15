@@ -584,7 +584,8 @@ class Episode:
                 path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "..", "results",
                                      "steer", st_cfg["file"])
                 vecs = np.load(path)
-                probe.set_steer({int(k): vecs[k] for k in vecs.files}, st_cfg.get("alpha", 1.0))
+                probe.set_steer({int(k): vecs[k] for k in vecs.files}, st_cfg.get("alpha", 1.0),
+                                op=st_cfg.get("op", "add"), layers=st_cfg.get("layers"))
         elif getattr(s, "probe", None) is not None:
             s.probe.set_steer({})
         for k in ("erode", "feather"):          # guidance blend widths, read by the stepper
