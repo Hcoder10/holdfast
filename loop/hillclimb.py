@@ -69,6 +69,7 @@ ap.add_argument("--cfg", default=None, help="JSON of knobs differing from the de
 ap.add_argument("--hypothesis", default="")
 ap.add_argument("--id", type=int, default=None)
 ap.add_argument("--accept", type=int, default=None, help="mark trial N as the incumbent and exit")
+ap.add_argument("--resume", action="store_true", help="the trial's generation is already running; only wait and judge")
 a = ap.parse_args()
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -155,9 +156,12 @@ def run_trial(tid, cfg, cases):
     run = f"hc{tid:02d}"
     knobs = {k: v for k, v in cfg.items() if k != "mode"}
     job = {"cases": cases, "modes": [cfg["mode"]], "out": run, "player": 1, "wait_chunks": 40, "cfg": knobs}
-    say(f"trial {tid}: launching {cfg}")
-    sh(["modal", "run", "-d", "modal_app/wh_modal.py::generate_bg", "--job-json", json.dumps(job),
-        "--shards", str(a.shards)], timeout=900)
+    if a.resume:
+        say(f"trial {tid}: generation already launched, waiting for it: {cfg}")
+    else:
+        say(f"trial {tid}: launching {cfg}")
+        sh(["modal", "run", "-d", "modal_app/wh_modal.py::generate_bg", "--job-json", json.dumps(job),
+            "--shards", str(a.shards)], timeout=900)
     folder = f"{run}/lingbot2_14b_{cfg['mode']}"
     t0 = time.time()
     while time.time() - t0 < 75 * 60:
