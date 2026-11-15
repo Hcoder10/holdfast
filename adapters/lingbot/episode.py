@@ -686,7 +686,8 @@ class Episode:
             if obj and not obj.lower().startswith("wait and observe") and (
                     not when or (case.get("perspective") or "").strip().lower() == when):
                 self.register = dict(self.cfg["register"], text=obj)
-        if self.cfg.get("prompt", "caption") == "caption+objective":
+        if self.cfg.get("prompt", "caption") == "caption+objective" and not (
+                self.register and self.register.get("replace")):   # "replace": the register carries it alone
             # PlayWorld's released local adapter gives the model the objective as its
             # text; here it is appended to the caption. A bare "wait and observe" adds
             # nothing and is left out.

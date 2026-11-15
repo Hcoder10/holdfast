@@ -85,3 +85,20 @@ orchestrator's reading of the frames against the public rubric wording, not benc
 | sweep4 | sink attention gain | 6 | never applied: patched the wrong module (0 hits recorded). Fixed, not yet re-run | re-run |
 | sweep4 | correlated chunk noise 0.5 | 6 | no clear change | drop |
 | sweep5 | memory through the image-condition channel | 6 | returns to the start view where latent pasting did not, but with ghosting and block artifacts | needs work |
+
+### Register validation on seven third-person interaction cases not used to choose it (sweep8, 01:10)
+
+Orchestrator's scores from frame strips (1-5, interaction rubric wording):
+
+| case | objective in prompt | + register 4 | + register 8 | register 8 alone |
+|---|---|---|---|---|
+| IF014 car turns right at the intersection | 3 (cuts to an interior view) | 2.5 (car changes shape) | 4 | 4 |
+| IF015 woman walks to the hot dog stand | 3 | 3.5 | 4 | 4.5 |
+| IF016 walks to the fence and on | 3 | 3 | 3 | 3 |
+| IF021 waiter walks straight | 4 | 4 | 4 | 4 |
+| IF023 walks the path to the sea | 4 | 4 | 4 | 4 |
+| IF025 enters the tall corn | 2 (subject dissolves) | 4 | 4 | 4 |
+| IF026 up the steps, hand on the rope | 3.5 | 3.5 | 4 | 4.5 |
+| mean | 3.2 | 3.5 | 3.9 | 4.0 |
+
+Chosen for third-person cases: the objective in its own register at gain 8, caption as the base prompt.
