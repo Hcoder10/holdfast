@@ -9,6 +9,7 @@ vNN -> run for un-blinding after the answers are in.
 import json
 import os
 import random
+import re
 import shutil
 import sys
 
@@ -28,8 +29,9 @@ for i, (run, case) in enumerate(items):
         p = os.path.join(d, f)
         if os.path.exists(p):
             t = open(p, encoding="utf8").read()
-            assert run in t
+            # the run name appears raw or JSON-escaped ("+" may be written as +)
             t = t.replace(run, "system_under_test")
+            t = re.sub(r"lingbot2_[A-Za-z0-9_+]*", "system_under_test", t)
             open(p, "w", encoding="utf8", newline="\n").write(t)
     mapping[name] = run
 json.dump(mapping, open(os.path.join(dst, "blind_map.json"), "w"), indent=1)
