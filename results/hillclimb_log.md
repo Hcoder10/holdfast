@@ -147,3 +147,14 @@ So the earlier "no effect" was real, not a mislocated write: the model already u
 `Episode.yaw` restarts at 0 after each translation chunk (by design, for the rotation memory). The return register,
 caption gate and keyframe arrival read it as the heading from the start, so after "turn 90, walk" they believed
 the camera faced the start. Fixed: they now use the heading accumulated from the episode's start.
+
+### Trajectory legibility: caption gate and camera guidance (02:30)
+
+| sweep | write | what the frames show | verdict |
+|---|---|---|---|
+| sweep15 | caption as a register whose gain falls to 0.3 / 0.1 / 0.02 as the camera turns away | OE044 (tomato cutting): control paints tomatoes and the boy into every direction; at 0.1 the away views are plain kitchen and the return shows the cutting again, twice. OE053 (bakery): control is bakery in all directions; gated, the away view is a window and wall and the return is the counter. OE046 (conveyor): at 0.1 a distinct away view appears. GC010: unchanged. The same register at constant gain 1 behaves like the control, so the gain is what matters | keep, away = 0.1 |
+| sweep14 | camera guidance w = 1.5-5 (extrapolating each block's camera scale and shift away from a still camera's) | OE043: the ignored strafe is executed from w = 2, clearly at 3. GC032: "rotate in place" was rendered as travel along the bridge; at 3-5 it is a pan from a fixed spot, still sharp. GC026, OE032 and IF011 (walk forward toward something far): still no visible advance at any w | keep w = 3 for first-person; forward on distant scenes unsolved |
+
+Ruled out as bugs while checking: a missing WASD input (upstream sets it to None; the camera layer takes pose rays
+only); translation and rotation signs (derived from upstream's example trajectories: W +z, A -x, D +x, look right
++yaw, look up +pitch, matching ours); step size (upstream's normalised W step is about 0.75, ours 1.0); intrinsics.
