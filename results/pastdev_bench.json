@@ -1,0 +1,579 @@
+{
+ "cases": [
+  "GC002",
+  "GC010",
+  "GC015",
+  "GC025",
+  "IF006",
+  "IF009",
+  "IF011",
+  "OE002",
+  "OE005",
+  "OE013",
+  "OE043",
+  "OE066"
+ ],
+ "notes_in_log": 68,
+ "arms": {
+  "none": {
+   "accuracy": 0.771,
+   "controls_right": 37,
+   "controls": 48,
+   "alive_switched_on": 11,
+   "seconds_per_decision": 1.52,
+   "prompt_chars_per_decision": 3136,
+   "prompt_tokens_per_decision_est": 784,
+   "usd_per_1000_decisions_input_est": 0.78
+  },
+  "log": {
+   "accuracy": 1.0,
+   "controls_right": 48,
+   "controls": 48,
+   "alive_switched_on": 0,
+   "seconds_per_decision": 2.09,
+   "prompt_chars_per_decision": 25919,
+   "prompt_tokens_per_decision_est": 6480,
+   "usd_per_1000_decisions_input_est": 6.48
+  },
+  "past.dev": {
+   "accuracy": 0.917,
+   "controls_right": 44,
+   "controls": 48,
+   "alive_switched_on": 0,
+   "seconds_per_decision": 3.23,
+   "prompt_chars_per_decision": 5395,
+   "prompt_tokens_per_decision_est": 1349,
+   "usd_per_1000_decisions_input_est": 1.35
+  }
+ },
+ "per_case": {
+  "GC002": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.03,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": false,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "GC010": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "GC015": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.06,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": false,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "GC025": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.06,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": false,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "IF006": {
+   "none": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0.06,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "IF009": {
+   "none": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0.06,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "IF011": {
+   "none": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0.06,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "OE002": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.03,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "OE005": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.03,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "OE013": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.06,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "OE043": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.03,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 8,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": false,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  },
+  "OE066": {
+   "none": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0.06,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": false,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "log": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   },
+   "past.dev": {
+    "decision": {
+     "action_register": 0,
+     "alive": 0,
+     "anchor": 0.5,
+     "scene_action": "none"
+    },
+    "correct": {
+     "action_register": true,
+     "alive": true,
+     "anchor": true,
+     "scene_action": true
+    }
+   }
+  }
+ }
+}
