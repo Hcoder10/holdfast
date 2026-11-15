@@ -42,11 +42,13 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         # shadow world on 11 turn-and-return cases: base, static pin to the first frame ("alive" slot), shadow world
         # object ledger on the same 11 cases as sw22 (whose shadow arm is its control)
         "sw24": {"final": "sweep24:lingbot2_14b_open_ledger"},
+        # 14 turn-and-return out-of-sight cases: shadow world, and shadow world whose unseen copy gets the Exa sentence
+        "sw26": {"baseline": "sweep26:lingbot2_14b_open_shadow", "final": "sweep26:lingbot2_14b_open_evolve"},
         "sw22": {"baseline": "sweep22:lingbot2_14b_open_base", "alive": "sweep22:lingbot2_14b_open_first",
                  "final": "sweep22:lingbot2_14b_open_shadow"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 
