@@ -116,3 +116,34 @@ Chosen for third-person cases: the objective in its own register at gain 8, capt
 Sentences written by the agents (cartographer: Exa question and fact; director: sentence), e.g. OE019: "The red
 streetcar with gold trim has moved significantly closer to the camera's position, now much nearer along the
 cobblestone street as it continues its approach down the tracks."
+
+### Where the points are lost: the gate (02:00)
+
+Baseline, 76-case half, real judge. The gate checks that the requested camera trajectory happened; a fail scores 1.
+
+| dimension | cases | gate pass / partial / fail | mean | share of cases scoring <= 1.2 |
+|---|---|---|---|---|
+| Geometry | 24 | 16 / 6 / 2 | 2.03 | 42% |
+| Out-of-sight | 22 | 8 / 7 / 7 | 1.51 | 82% |
+
+Reading the nine failures against what was commanded and what the frames measured:
+- translation ignored: the player pressed W/S or A/D and the camera stayed still (GC026, OE043, OE032, and the
+  interaction case IF011 has the same symptom);
+- the turn back shows new content, so it reads as "kept turning, never came back" (OE053: commanded and measured
+  right x10, wait, left x10; judge: "continuously pans right");
+- the first-frame subject stays in frame while the background turns, so it reads as "camera static" (OE046, OE044);
+- a turn rendered as travel along a repeating structure (GC032).
+
+### Sink diagnostic (02:00): the write is correct, and the sink is the model's return memory
+
+Share of self-attention on the six first frames, measured inside the forward pass (explicit softmax on sampled
+queries, 10-11 calls per run, two cases): unmodified 17-21%; gain 0.001 -> 0.0%; gain 16 -> 47-54%; gain 1000 -> 81%.
+Frames, fixed actions, turn right and back: unmodified returns to the start view; with the sink blocked it does
+not (ends on a different building); gain 16 looks like the control; gain 1000 smears the start view over everything.
+So the earlier "no effect" was real, not a mislocated write: the model already uses those frames, and more is not better.
+
+### Bug found: heading reset at every translation
+
+`Episode.yaw` restarts at 0 after each translation chunk (by design, for the rotation memory). The return register,
+caption gate and keyframe arrival read it as the heading from the start, so after "turn 90, walk" they believed
+the camera faced the start. Fixed: they now use the heading accumulated from the episode's start.
