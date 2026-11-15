@@ -43,11 +43,14 @@ a = ap.parse_args()
 
 def key():
     name = "GEMINI_API_KEY" if a.transport == "gemini" else "OPENROUTER_API_KEY"
-    k = os.environ.get(name)
-    if not k and (ROOT / ".env").exists():
+    # The repo's .env wins over the shell: a stale key exported in the user's profile
+    # was silently used here and refused for credit while the .env key was valid.
+    k = None
+    if (ROOT / ".env").exists():
         for line in (ROOT / ".env").read_text(encoding="utf8").splitlines():
             if line.startswith(name + "="):
                 k = line.split("=", 1)[1].strip()
+    k = k or os.environ.get(name)
     if not k:
         raise SystemExit(name + " is not set")
     return k
