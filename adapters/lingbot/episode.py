@@ -597,6 +597,13 @@ class Episode:
             self.guide_from = int(self.cfg["guide_from"])
         if "speed" in self.cfg:
             self.speed = float(self.cfg["speed"])
+        self.register = None
+        if self.cfg.get("register"):
+            # {"gain": w, "ramp": chunks}: the objective goes into its own text register
+            # rather than into the caption, with an attention gain (see stepper.set_register)
+            obj = (case.get("prompt") or "").strip()
+            if obj and not obj.lower().startswith("wait and observe"):
+                self.register = dict(self.cfg["register"], text=obj)
         if self.cfg.get("prompt", "caption") == "caption+objective":
             # PlayWorld's released local adapter gives the model the objective as its
             # text; here it is appended to the caption. A bare "wait and observe" adds
@@ -623,6 +630,8 @@ class Episode:
             self.memory_entries = recall_entries(case["task_id"])
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
+        if self.register:
+            s.set_register(first_prompt, self.register["text"], self.register.get("gain", 1.0))
         if self.anchor:
             s.set_anchored(self.timeline.spec["away_prompt"],
                            [first_prompt] + [m["text"] for m in self.memory_entries])
@@ -680,6 +689,8 @@ class Episode:
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "cfg": self.cfg, "brief": self.brief,
+                "register": None if not self.register else dict(
+                    self.register, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "watchdog": {"faults": sum(1 for w in self.watch if w.get("fault")),
                              "repaired": sum(1 for w in self.watch if w.get("fault") is None and w.get("attempt", 0) > 0),
                              "trace": [w for w in self.watch if w.get("fault") or w.get("attempt", 0) > 0

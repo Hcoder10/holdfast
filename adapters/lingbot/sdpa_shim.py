@@ -13,6 +13,12 @@ import torch.nn.functional as F
 # it. The stepper sets it for one generation step and clears it afterwards.
 CROSS_MASK = None
 
+# Cross-attention register gain. When set to a float tensor [Lk] (one value per text
+# token), it is added to the attention logits of every cross-attention call with that
+# many text tokens: log(w) on a span makes image tokens attend to it w times as much.
+CROSS_BIAS = None
+BIAS_HITS = 0      # calls in which the bias was applied; a silent no-op would leave this at 0
+
 
 def sdpa_flash_attention(q, k, v, q_lens=None, k_lens=None, dropout_p=0.0,
                          softmax_scale=None, q_scale=None, causal=False,
@@ -35,6 +41,12 @@ def sdpa_flash_attention(q, k, v, q_lens=None, k_lens=None, dropout_p=0.0,
     if cm is not None and cm.shape == (lq, lk):
         cm = cm.to(q.device)[None, None]
         mask = cm if mask is None else (mask & cm)
+    cb = CROSS_BIAS
+    if cb is not None and cb.shape[0] == lk:
+        global BIAS_HITS
+        BIAS_HITS += 1
+        cb = cb.to(device=q.device, dtype=q.dtype)[None, None, None, :]
+        mask = cb if mask is None else torch.where(mask, cb, torch.full_like(cb, float("-inf")))
     x = F.scaled_dot_product_attention(
         q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2),
         attn_mask=mask, is_causal=causal, dropout_p=dropout_p)

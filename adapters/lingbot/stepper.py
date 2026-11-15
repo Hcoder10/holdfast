@@ -152,6 +152,23 @@ class LingBotStepper:
             dtype=p.pipe_dtype, device=self.device)
         self.cross_first = True
 
+    def set_register(self, base_prompt, text, gain=1.0):
+        """A text register: `text` is encoded on its own and placed after `base_prompt`
+        in the cross-attention context, and `register_gain` (changeable at any chunk)
+        sets how strongly image tokens attend to it. Gain 1 is plain attention; the
+        gain can be ramped, so a write need not arrive as an abrupt prompt switch."""
+        self.set_anchored(base_prompt, [text])
+        self.register_gain = float(gain)
+
+    def _cross_bias(self):
+        g = float(getattr(self, "register_gain", 1.0) or 1.0)
+        if g == 1.0 or not getattr(self, "regional", None) or not getattr(self, "spans", None):
+            return None
+        a, b = self.spans[0]
+        bias = torch.zeros(512, dtype=torch.float32, device=self.device)
+        bias[a:b] = float(np.log(max(g, 1e-4)))
+        return bias
+
     def _cross_mask(self, region):
         """[3*tokens_per_frame, 512] bool. `region` is one [3, H, W] footprint (for a
         single anchored entry) or a list of them, one per entry (1 = inside)."""
@@ -169,6 +186,7 @@ class LingBotStepper:
     @torch.no_grad()
     def reset(self, image, prompt, seed=0):
         """Start an episode from a PIL image and a text prompt."""
+        self.register_gain = 1.0
         p = self.pipe
         vs, ps = p.vae_stride, p.patch_size
         img = TF.to_tensor(image.convert("RGB")).sub_(0.5).div_(0.5).to(self.device)
@@ -443,10 +461,12 @@ class LingBotStepper:
         sdpa_shim.CROSS_MASK = None
         if getattr(self, "regional", None) and region is not None:
             sdpa_shim.CROSS_MASK = self._cross_mask(region)
+        sdpa_shim.CROSS_BIAS = self._cross_bias()
         try:
             x0 = self._denoise(latent, kwargs, g, guide_from, guide_hard)
         finally:
             sdpa_shim.CROSS_MASK = None
+            sdpa_shim.CROSS_BIAS = None
         self.latents.append(x0.float())
         self.rel_poses.append(rel)
         self.prompts.append(self.prompt)
