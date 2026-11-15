@@ -107,6 +107,25 @@ def generate(job_json: str, shards: int = 4):
         print("shard done", s)
 
 
+@app.function(timeout=10 * 3600)
+def orchestrate(job: dict, shards: int):
+    """Fan the job out from inside Modal, so the run does not depend on the laptop
+    that launched it staying online (a dropped connection killed an earlier run)."""
+    cases = job["cases"]
+    parts = [dict(job, cases=cases[i::shards]) for i in range(shards)]
+    parts = [p for p in parts if p["cases"]]
+    return list(generate_shard.starmap([(p, i) for i, p in enumerate(parts)]))
+
+
+@app.local_entrypoint()
+def generate_bg(job_json: str, shards: int = 4):
+    """Start a job and return at once. Use with `modal run -d`. Finished cases are
+    skipped, so the same command resumes an interrupted run."""
+    job = json.loads(job_json)
+    call = orchestrate.spawn(job, shards)
+    print("spawned", call.object_id, "for", len(job["cases"]), "cases")
+
+
 @app.local_entrypoint()
 def judge_inputs(run: str):
     print(judge_inputs_remote.remote(run))
