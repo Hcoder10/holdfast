@@ -174,12 +174,40 @@ class Episode:
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
 
+    # -- side memory: what to write when the camera comes back ---------------
+    def _ret_update(self, yaw, pitch):
+        """Set this chunk's return-register gain and sink gain from where the camera
+        will be looking. Away from the start view both are quiet; once the camera has
+        been away and is turning back onto the start view they ramp in. The base prompt
+        never changes, so nothing arrives as a prompt switch."""
+        r = getattr(self, "ret", None)
+        if not r:
+            return
+        ty = (self.yaw + yaw + 180.0) % 360.0 - 180.0
+        tp = self.pitch + pitch
+        near = abs(ty) < r["near_yaw"] and abs(tp) < r["near_pitch"]
+        if not near:
+            r["away"] += 1
+            r["back"] = 0
+        elif r["away"] >= 2:
+            r["back"] += 1
+        back = r["away"] >= 2 and near
+        if r.get("text"):
+            g = r["gain"]
+            self.s.register_gain = 0.01 if not back else (g ** 0.5 if r["back"] == 1 else g)
+        if r.get("sink"):
+            self.s.tune["sink_gain"] = (r["sink"] if back else r.get("sink_away", 1.0))
+        r["trace"].append({"chunk": self.s.chunk_id, "target_yaw": round(ty, 1), "target_pitch": round(tp, 1),
+                           "back": back, "register_gain": round(float(self.s.register_gain), 3),
+                           "sink_gain": self.s.tune.get("sink_gain", 1.0)})
+
     # -- low level ---------------------------------------------------------
     def _step(self, label, yaw=0.0, pitch=0.0, move=None, hold=False, rewind=None):
         """One chunk: rotate by (yaw, pitch) degrees or translate. Returns the
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
         guide, reloc = None, None
         direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
+        self._ret_update(yaw, pitch)
         if move is not None:
             rel = [_translate(move, self.speed)] * CHUNK
         else:
@@ -647,6 +675,28 @@ class Episode:
             self.guide_via = self.cfg["guide_via"]
         if self.register:
             s.set_register(first_prompt, self.register["text"], self.register.get("gain", 1.0))
+        self.ret = None
+        rc = self.cfg.get("ret")
+        if rc and not self.register and not (case.get("prompt") or "").lower().startswith("wait and observe"):
+            # {"gain": register gain on return, "sink": sink gain on return, "sink_away": sink gain
+            #  while away, "text": "evolve" (sourced later-state sentence; the caption if the scene is
+            #  static) | "caption" | "none"}
+            text, info = "", {"source": "off"}
+            mode_t = rc.get("text", "evolve")
+            if mode_t == "evolve":
+                import outsight
+                try:
+                    info = outsight.make(case, image, use_web=not rc.get("noweb"), use_memory=not rc.get("nomem"))
+                except Exception as e:
+                    info = {"text": "", "source": "failed: " + repr(e)[:120]}
+                text = info.get("text") or (self.caption if rc.get("static_caption", True) else "")
+            elif mode_t == "caption":
+                text, info = self.caption, {"source": "caption"}
+            self.ret = {"text": text, "info": info, "gain": float(rc.get("gain", 4.0)), "sink": rc.get("sink"),
+                        "sink_away": rc.get("sink_away", 1.0), "near_yaw": float(rc.get("near_yaw", 30.0)),
+                        "near_pitch": float(rc.get("near_pitch", 20.0)), "away": 0, "back": 0, "trace": []}
+            if text:
+                s.set_register(first_prompt, text, 0.01)
         if self.anchor:
             s.set_anchored(self.timeline.spec["away_prompt"],
                            [first_prompt] + [m["text"] for m in self.memory_entries])
@@ -704,6 +754,10 @@ class Episode:
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "cfg": self.cfg, "brief": self.brief,
+                "ret": None if not getattr(self, "ret", None) else {
+                    "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
+                    "sink": self.ret["sink"], "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
+                    "trace": self.ret["trace"]},
                 "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes,
                              residual_writes=getattr(getattr(s, "probe", None), "writes", 0)),
                 "register": None if not self.register else dict(
