@@ -20,6 +20,7 @@ import re
 
 import numpy as np
 
+from director import facing_start
 from odometry import intrinsics_matrix, relative_rotation
 from panorama import RotationMemory, view_footprint
 from player import FROM_KIND, TO_KIND
@@ -165,6 +166,13 @@ class Episode:
         prompt = stage = None
         if self.timeline is not None:
             t = len(self.frames) / FPS
+            if hasattr(self.timeline, "tick"):
+                # online planning: the agents update state and look up the next
+                # directions while this chunk renders; use whatever is ready now
+                if self.frames:
+                    self.timeline.tick(t, self.s.chunk_id, self.frames[-1],
+                                       facing_start(self.yaw, self.pitch))
+                self.memory_entries = self.timeline.live_entries()
             stage = self.timeline.stage_at(t)
             # heading at the middle of the chunk about to be generated
             prompt = self.timeline.prompt_at(t, self.yaw + yaw / 2, self.pitch + pitch / 2)
@@ -377,6 +385,11 @@ class Episode:
     # -- episode -----------------------------------------------------------
     def run(self, case, image, seed=0):
         s = self.s
+        if "online" in self.flags:
+            import online
+            self.timeline = online.OnlineDirector(
+                case, image, use_web="noweb" not in self.flags, use_memory="nomem" not in self.flags)
+            self.anchor = "anchor" in self.flags
         if "memtok" in self.flags and not self.memory_entries:
             self.memory_entries = recall_entries(case["task_id"])
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
@@ -430,6 +443,7 @@ class Episode:
                 self._settle()
             final = self._return_check()
         return {"task_id": case["task_id"], "mode": self.mode, "plan": plan,
+                "online": self.timeline.report() if hasattr(self.timeline, "report") else None,
                 "player": None if self.player is None else {"model": self.player.model,
                                                             "trace": self.player.trace},
                 "actions": self.history,
