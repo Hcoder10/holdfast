@@ -57,12 +57,43 @@ def sdpa_flash_attention(q, k, v, q_lens=None, k_lens=None, dropout_p=0.0,
     return x.type(out_dtype)
 
 
+# Self-attention gain on the sink (the episode's first frames, kept at the front of the
+# attention cache). (n_sink_tokens, log_gain): added to the logits of those keys in
+# self-attention calls whose cache already extends past the sink and the current chunk.
+SELF_SINK = None
+SELF_HITS = 0
+
+
+def self_attention(q, k, v, **kw):
+    """Stand-in for wan.modules.attention.attention as used by the cached self-attention
+    (its SDPA branch), plus the optional sink gain."""
+    global SELF_HITS
+    dtype = kw.get("dtype", torch.bfloat16)
+    lq, lk = q.size(1), k.size(1)
+    mask = None
+    ss = SELF_SINK
+    if ss is not None and lk >= ss[0] + 2 * lq:
+        mask = torch.zeros(lk, device=q.device, dtype=dtype)
+        mask[:ss[0]] = ss[1]
+        mask = mask[None, None, None, :]
+        SELF_HITS += 1
+    out = F.scaled_dot_product_attention(q.transpose(1, 2).to(dtype), k.transpose(1, 2).to(dtype),
+                                         v.transpose(1, 2).to(dtype), attn_mask=mask)
+    return out.transpose(1, 2).contiguous()
+
+
 def install(force=False):
     """Patch every loaded `wan` module that imported `flash_attention`.
     Returns True if the shim was installed, False if flash-attn is present and
     `force` is not set. World-anchored cross-attention needs the shim."""
     import sys
     import wan.modules.attention as att
+    try:    # the cached self-attention calls `attention`; route it here so the sink gain can apply
+        import wan.modules.model_causal as mc
+        if not (att.FLASH_ATTN_2_AVAILABLE or att.FLASH_ATTN_3_AVAILABLE):
+            mc.attention = self_attention
+    except Exception:
+        pass
     if (att.FLASH_ATTN_2_AVAILABLE or att.FLASH_ATTN_3_AVAILABLE) and not force:
         return False
     att.flash_attention = sdpa_flash_attention

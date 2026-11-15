@@ -68,6 +68,7 @@ class LingBotStepper:
         self.cfg = WAN_CONFIGS[task]
         self.max_area = max_area
         self.intrinsics_480 = intrinsics  # fx, fy, cx, cy for a 480x832 frame
+        self.sink_frames = int(sink_size)
         assert local_attn_size > 0, "streaming needs a bounded attention window"
         self.pipe = wan.WanI2VCausal(
             config=self.cfg, checkpoint_dir=ckpt_dir, device_id=device_id, rank=0,
@@ -187,6 +188,13 @@ class LingBotStepper:
     def reset(self, image, prompt, seed=0):
         """Start an episode from a PIL image and a text prompt."""
         self.register_gain = 1.0
+        # state-write knobs, set by the episode from its cfg (all off by default):
+        #   anchor_stats  pull each chunk's per-channel latent mean this far back to chunk 0's
+        #   sink_gain     self-attention gain on the episode's first frames
+        #   noise_rho     correlation of each chunk's starting noise with the previous chunk's
+        self.tune = {}
+        self.mu0 = None
+        self.last_noise = None
         p = self.pipe
         vs, ps = p.vae_stride, p.patch_size
         img = TF.to_tensor(image.convert("RGB")).sub_(0.5).div_(0.5).to(self.device)
@@ -456,17 +464,34 @@ class LingBotStepper:
         }
         latent = torch.randn(16, CHUNK, self.lat_h, self.lat_w, dtype=torch.float32,
                              generator=self.gen, device=self.device)
+        rho = float(self.tune.get("noise_rho", 0.0) or 0.0)
+        if rho and self.last_noise is not None:
+            latent = rho * self.last_noise + (1 - rho * rho) ** 0.5 * latent
+        self.last_noise = latent.clone()
+        if g is not None and guide_via == "cond":
+            # memory through the model's own image-condition channel: the remembered
+            # latents are presented as given frames (mask 1), nothing is pasted in sampling
+            y = kwargs["y"][0].clone()
+            m = (g[1] > 0.5).float()                       # [1, 3, h, w]
+            y[:4] = torch.maximum(y[:4], m.expand(4, -1, -1, -1))
+            y[4:] = m * g[0].to(y.dtype) + (1 - m) * y[4:]
+            kwargs["y"] = [y]
+            self.cond_writes = getattr(self, "cond_writes", 0) + 1
+            g = None
         # region: uint8/bool [3, H, W], the starting view's footprint in each latent
         # frame of this chunk. Only used with set_regional().
         sdpa_shim.CROSS_MASK = None
         if getattr(self, "regional", None) and region is not None:
             sdpa_shim.CROSS_MASK = self._cross_mask(region)
         sdpa_shim.CROSS_BIAS = self._cross_bias()
+        sg = float(self.tune.get("sink_gain", 1.0) or 1.0)
+        sdpa_shim.SELF_SINK = None if sg == 1.0 else (self.sink_frames * self.frame_seqlen, float(np.log(sg)))
         try:
             x0 = self._denoise(latent, kwargs, g, guide_from, guide_hard)
         finally:
             sdpa_shim.CROSS_MASK = None
             sdpa_shim.CROSS_BIAS = None
+            sdpa_shim.SELF_SINK = None
         self.latents.append(x0.float())
         self.rel_poses.append(rel)
         self.prompts.append(self.prompt)
@@ -497,6 +522,12 @@ class LingBotStepper:
                     latent = p.scheduler.add_noise(x0, noise, self.timesteps[i + 1])
             if g is not None and guide_hard:
                 x0 = (g[1] * g[0] + (1 - g[1]) * x0).to(x0.dtype)
+            lam = float(self.tune.get("anchor_stats", 0.0) or 0.0)
+            mu = x0.float().mean(dim=(1, 2, 3), keepdim=True)
+            if self.mu0 is None:
+                self.mu0 = mu
+            elif lam:
+                x0 = (x0 + lam * (self.mu0 - mu)).to(x0.dtype)
             # write the clean chunk into the attention cache
             probe = getattr(self, "probe", None)
             if probe is not None:

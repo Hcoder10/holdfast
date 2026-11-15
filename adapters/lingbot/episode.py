@@ -630,6 +630,10 @@ class Episode:
             self.memory_entries = recall_entries(case["task_id"])
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
+        s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho") if k in self.cfg}
+        s.cond_writes = 0
+        if self.cfg.get("guide_via"):
+            self.guide_via = self.cfg["guide_via"]
         if self.register:
             s.set_register(first_prompt, self.register["text"], self.register.get("gain", 1.0))
         if self.anchor:
@@ -689,6 +693,7 @@ class Episode:
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "cfg": self.cfg, "brief": self.brief,
+                "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes),
                 "register": None if not self.register else dict(
                     self.register, bias_hits=__import__("sdpa_shim").BIAS_HITS),
                 "watchdog": {"faults": sum(1 for w in self.watch if w.get("fault")),
