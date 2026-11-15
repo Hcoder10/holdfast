@@ -35,7 +35,7 @@ MAX_YAW_PER_CHUNK = 30.0
 MAX_STEPS = 40          # PlayWorld's interaction budget
 MAX_AGENT_EXTRA = 2     # agent-added chunks allowed after each preset segment
 MIN_INLIERS = 30        # feature matches needed to trust a rotation measurement
-ASSUMED_GAIN = 0.85     # achieved / commanded rotation when it cannot be measured
+ASSUMED_GAIN = 1.0      # achieved / commanded rotation when nothing is measured or remembered
 ARROWS = {"←": "left", "→": "right", "↑": "up", "↓": "down"}
 KEYS = {"w": "forward", "s": "back", "a": "strafe_left", "d": "strafe_right",
         "u": "up", "j": "down", "i": "up", "k": "down", "l": "right"}
@@ -60,6 +60,33 @@ def recall_entries(task_id):
                                         "text": m.group(3).strip().rstrip("."),
                                         "source_id": h.get("source_id"), "author": h.get("author")}
     return [out[k] for k in sorted(out)]
+
+
+def recall_gain(model, default):
+    """Controller reads the turn gain other episodes measured for this model."""
+    try:
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
+        import mem
+        vals = []
+        for h in mem.recall("controller", f"{model} measured yaw turn gain achieved over commanded", 10):
+            for text in [h.get("text") or ""] + list(h.get("excerpts") or []):
+                m = re.search(rf"{re.escape(model)} yaw gain ([0-9.]+)", text)
+                if m:
+                    vals.append(float(m.group(1)))
+        return float(np.median(vals)) if vals else default
+    except Exception:
+        return default
+
+
+def write_gain(model, gain, n, task_id):
+    try:
+        import mem
+        mem.write("controller", "calibration",
+                  f"{model} yaw gain {gain:.2f} (achieved over commanded, median of {n} measured chunks, case {task_id})",
+                  {"model": model, "gain": round(gain, 3), "n": n, "case": task_id})
+    except Exception:
+        pass
 
 
 def load_case(data_json, task_id):
@@ -99,6 +126,7 @@ class Episode:
                  guide_from=1, guide_hard=True, timeline=None, anchor=False,
                  guide_via="latent", memory_entries=None, player=None):
         self.player = player          # PlayWorld's agent player (player.Player) or None
+        self.model_name = "lingbot2_14b"
         self.history, self.chunk_frames = [], []
         # memory_entries: [{"heading": deg, "pitch": deg, "text": visual description,
         #                   "source_id": past.dev id, "url": web source}], retrieved from
@@ -126,6 +154,8 @@ class Episode:
         self.last_turn = None         # the turn just completed, kept for rewinding
         self.turn_log = None          # frames of the turn in progress
         self.trust_command = False
+        self.gains = []               # reliable achieved/commanded yaw ratios this episode
+        self.prior_gain = ASSUMED_GAIN
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
 
@@ -210,10 +240,14 @@ class Episode:
             if rewind is not None or self.trust_command or (cover > 0.5 and self.guide_via == "latent"):
                 got = (yaw, pitch)
             elif my is None or n < MIN_INLIERS:
-                # nothing to measure against (water, sky): assume the usual shortfall
-                got = (yaw * ASSUMED_GAIN, pitch * ASSUMED_GAIN)
+                # nothing to measure against (bare wall, water, sky): dead-reckon with
+                # the gain measured so far in this episode, else the one in memory
+                g = self._gain()
+                got = (yaw * g, pitch * g)
             else:
                 got = (my, mp)
+                if abs(yaw) >= 15.0 and abs(pitch) < 1.0 and 0.3 < my / yaw < 2.5:
+                    self.gains.append(my / yaw)
             y0, p0 = self.yaw, self.pitch
             self.yaw, self.pitch = y0 + got[0], p0 + got[1]
             if self.turn_log is not None and rewind is None:
@@ -357,6 +391,12 @@ class Episode:
             self._agent_chunk(word)
         return False
 
+    def _gain(self):
+        """Achieved / commanded rotation to assume when it cannot be measured."""
+        if len(self.gains) >= 2:
+            return float(np.median(self.gains))
+        return self.prior_gain
+
     def _settle(self):
         """Memory mode: finish exactly on the starting orientation and hold it, so a
         return ends on the first view instead of a few degrees past it."""
@@ -385,6 +425,8 @@ class Episode:
     # -- episode -----------------------------------------------------------
     def run(self, case, image, seed=0):
         s = self.s
+        if self.mode != "open" and "nomem" not in self.flags:
+            self.prior_gain = recall_gain(self.model_name, ASSUMED_GAIN)
         if "online" in self.flags:
             import online
             self.timeline = online.OnlineDirector(
@@ -442,7 +484,10 @@ class Episode:
             if self.mode == "memory":
                 self._settle()
             final = self._return_check()
+        if self.mode != "open" and "nomem" not in self.flags and len(self.gains) >= 3:
+            write_gain(self.model_name, float(np.median(self.gains)), len(self.gains), case["task_id"])
         return {"task_id": case["task_id"], "mode": self.mode, "plan": plan,
+                "turn_gain": {"prior": self.prior_gain, "measured": [round(g, 2) for g in self.gains]},
                 "online": self.timeline.report() if hasattr(self.timeline, "report") else None,
                 "player": None if self.player is None else {"model": self.player.model,
                                                             "trace": self.player.trace},

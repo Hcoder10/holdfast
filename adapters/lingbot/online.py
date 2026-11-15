@@ -42,7 +42,7 @@ SCENE_SYSTEM = """You direct a video world model. You see the first frame of a s
  "viewpoint": one sentence: where the camera stands and which way it faces,
  "process": one sentence naming the main ongoing process (who or what is doing what), or null if the scene is static,
  "rate": one short phrase: how fast that process visibly advances per 5 seconds, or null,
- "target_box": [x0,y0,x1,y1] normalised box (origin top left) of the thing whose state changes, or null,
+ "target_box": [x0,y0,x1,y1] normalised box (origin top left) covering ONLY the part of the image that will visibly change in the next few seconds (the blank area where the next mark, letter or item will appear, plus the hand or tool doing it), not the whole subject; keep it as small as you can; null if nothing is in progress,
  "subject": 40-70 words describing the first frame exactly as it is, in the caption's style,
  "away": 40-70 words describing what the camera sees when turned away from the first view: the surroundings only, same place, light and weather, continuing what is visible at the frame edges. It must NOT name or describe the subject of the first frame or anything that only exists in that view, and must not use the name of the place,
  "state": short label of the process state now (e.g. "one green stripe painted")
