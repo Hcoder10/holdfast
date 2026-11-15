@@ -24,7 +24,7 @@ write (that arm was designed after the held-out result was known, and we say so)
 
 **Rigour.** The configuration was chosen on half the benchmark and run once on the other half. We measured the
 judge's own noise (the same video scored 5, 3 and 1 on repeats) and report intervals. A blinding bug of ours was
-caught at the first tally, fixed and re-judged. Fifteen things we built did not work and are documented with
+caught at the first tally, fixed and re-judged. More than a dozen things we built did not work and are documented with
 their evidence: residual-stream steering, attention gain on the first frames, a view bank, camera guidance, an
 object ledger, a launch-time planner, motion written into the noise, and more.
 
