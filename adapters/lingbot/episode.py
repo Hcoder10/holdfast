@@ -161,6 +161,7 @@ class Episode:
         self.wait_chunks, self.guide_from, self.guide_hard = wait_chunks, guide_from, guide_hard
         self.records, self.frames = [], []
         self.yaw = self.pitch = 0.0   # estimated orientation since the last translation
+        self.base_yaw = self.base_pitch = 0.0   # orientation at the last translation, from the start
         self.last_turn = None         # the turn just completed, kept for rewinding
         self.turn_log = None          # frames of the turn in progress
         self.trust_command = False
@@ -173,6 +174,15 @@ class Episode:
         self.prior_gain = ASSUMED_GAIN
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
+
+    @property
+    def ayaw(self):
+        """Heading from the episode's start (self.yaw restarts at every translation)."""
+        return self.base_yaw + self.yaw
+
+    @property
+    def apitch(self):
+        return self.base_pitch + self.pitch
 
     # -- side memory, tensor channel: evicted views, indexed by heading ---------
     def _bank_read(self, yaw, pitch, move=None):
@@ -188,8 +198,8 @@ class Episode:
         b = getattr(self, "bank", None)
         if b is None or self.s.chunk_id < 3:
             return
-        ty = (self.yaw + yaw + 180.0) % 360.0 - 180.0
-        tp = self.pitch + pitch
+        ty = (self.ayaw + yaw + 180.0) % 360.0 - 180.0
+        tp = self.apitch + pitch
         tpos = self._moved(move)
         if b["via"] == "key":
             off = max(abs(ty), abs(tp))
@@ -224,7 +234,7 @@ class Episode:
         """Position after `move`, in steps, in the starting view's frame (x right, z forward)."""
         x, z = self.pos
         if move is not None:
-            h = np.radians(self.yaw)
+            h = np.radians(self.ayaw)
             fx, fz = np.sin(h), np.cos(h)            # forward direction at the current heading
             dx, dz = {"forward": (fx, fz), "back": (-fx, -fz), "strafe_right": (fz, -fx),
                       "strafe_left": (-fz, fx)}[move]
@@ -240,7 +250,7 @@ class Episode:
         self.pos = list(self._moved(move))
         if b is None:
             return
-        e = {"chunk": self.s.chunk_id - 1, "yaw": (self.yaw + 180.0) % 360.0 - 180.0, "pitch": self.pitch,
+        e = {"chunk": self.s.chunk_id - 1, "yaw": (self.ayaw + 180.0) % 360.0 - 180.0, "pitch": self.apitch,
              "pos": tuple(round(v, 2) for v in self.pos), "lat": self.s.latents[-1].clone()}
         # a newer observation of the same heading and place supersedes the old one
         old = [v for v in b["views"] if v["pos"] == e["pos"] and abs(v["yaw"] - e["yaw"]) < 5 and
@@ -256,8 +266,8 @@ class Episode:
         will be looking. Away from the start view both are quiet; once the camera has
         been away and is turning back onto the start view they ramp in. The base prompt
         never changes, so nothing arrives as a prompt switch."""
-        ty = (self.yaw + yaw + 180.0) % 360.0 - 180.0
-        tp = self.pitch + pitch
+        ty = (self.ayaw + yaw + 180.0) % 360.0 - 180.0
+        tp = self.apitch + pitch
         cg = getattr(self, "cap_gate", None)
         if cg:
             # The caption describes the starting view. Its attention gain follows how far the
@@ -380,6 +390,7 @@ class Episode:
             self.last_turn = None
             self.been_away = False
             self.shadow = None
+            self.base_yaw, self.base_pitch = self.base_yaw + self.yaw, self.base_pitch + self.pitch
             self.yaw = self.pitch = self.level_pitch = 0.0
             if self.mem is not None:
                 self.mem.keys = []
