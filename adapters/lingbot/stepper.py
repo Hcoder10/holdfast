@@ -267,6 +267,28 @@ class LingBotStepper:
             m = torch.minimum(m, soft[0] * soft[0])
         return lat.float(), m[None]
 
+    # ------------------------------------------------------------- self-inspection
+    def chunk_health(self):
+        """Readings from the model's own latents for the chunk just generated.
+
+        continuity  cosine similarity between the last latent frame of the previous
+                    chunk and the first latent frame of this one. It collapses when
+                    the scene is replaced outright (a hard reset).
+        motion      mean absolute change between this chunk's first and last latent
+                    frame, relative to the latent's scale. Near zero when the picture
+                    has frozen.
+        """
+        cur = self.latents[-1]
+        out = {"motion": float((cur[:, -1] - cur[:, 0]).abs().mean() / (cur.abs().mean() + 1e-6))}
+        if len(self.latents) > 1:
+            a, b = self.latents[-2][:, -1].flatten(), cur[:, 0].flatten()
+            out["continuity"] = float(torch.nn.functional.cosine_similarity(a, b, dim=0))
+        return out
+
+    def reseed(self, seed):
+        self.gen = torch.Generator(device=self.device)
+        self.gen.manual_seed(int(seed))
+
     # ------------------------------------------------------------ forked rollouts
     _STATE = ("self_cache", "cross_cache", "context", "prompt", "regional", "spans", "subject_span",
               "latents", "rel_poses", "prompts", "chunk_id", "gen", "shown", "cross_first")

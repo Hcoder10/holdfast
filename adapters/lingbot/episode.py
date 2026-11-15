@@ -34,6 +34,8 @@ YAW_PER_TOKEN = 22.5     # "turn 90 degrees" is written as 4 tokens in the datas
 PITCH_PER_TOKEN = 10.0   # "tilt 30 degrees" is written as 3 tokens
 MAX_YAW_PER_CHUNK = 30.0
 MAX_STEPS = 40          # PlayWorld's interaction budget
+WD_RESET_DROP = 0.25    # continuity this far below the episode's running median counts as a hard reset
+WD_FREEZE_FRAC = 0.25   # still-camera motion below this fraction of the opening motion counts as a freeze
 NEUTRAL_AWAY = ("The surrounding area of the same place, continuing naturally in every direction, "
                 "in the same style, lighting and weather.")
 MAX_AGENT_EXTRA = 2     # agent-added chunks allowed after each preset segment
@@ -167,6 +169,7 @@ class Episode:
         self.shadow = None            # forked rollout still watching the starting view
         self.shadow_chunks = 0
         self.caption = ""
+        self.watch, self.wd_cont, self.wd_motion = [], [], []   # watchdog trace and running levels
         self.prior_gain = ASSUMED_GAIN
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
@@ -239,8 +242,10 @@ class Episode:
                                                self.yaw + yaw * (j + 1) / CHUNK,
                                                self.pitch + pitch * (j + 1) / CHUNK)
                                 for j in range(CHUNK)])]
-        new = self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
-                          guide_hard=self.guide_hard, region=region, guide_via=self.guide_via)
+        def generate():
+            return self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
+                               guide_hard=self.guide_hard, region=region, guide_via=self.guide_via)
+        new = self._watched(generate, label, moving=bool(yaw or pitch or move))
         prev = self.frames[-1] if self.frames else new[0]
         my, mp, n = relative_rotation(prev, new[-1], self.K)
         self.chunk_frames.append(new)
@@ -478,6 +483,51 @@ class Episode:
             return np.stack(out_i), np.stack(out_m)
         return guide
 
+    def _watched(self, generate, label, moving):
+        """Watchdog: generate a chunk, read the model's own latents for signs that it
+        went wrong, and if so roll the state back and try again with different noise.
+
+        Two faults are caught, both named by the judge as what sinks a rollout:
+          hard reset  continuity far below this episode's running level
+          freeze      camera still, yet motion far below what the episode began with
+        The state (attention cache, latents) is snapshotted before the chunk, so a
+        rejected chunk leaves no trace. The healthiest attempt is kept. Every check
+        and repair is recorded in `self.watch`."""
+        if not self.cfg.get("watchdog"):
+            return generate()
+        s, retries = self.s, int(self.cfg.get("wd_retries", 2))
+        snap = s.fork() if s.chunk_id > 0 else None
+        best = None
+        for attempt in range(retries + 1):
+            new = generate()
+            h = s.chunk_health()
+            cont_ref = float(np.median(self.wd_cont)) if len(self.wd_cont) >= 2 else None
+            mot_ref = float(np.median(self.wd_motion[:3])) if len(self.wd_motion) >= 2 else None
+            reset = cont_ref is not None and "continuity" in h and h["continuity"] < cont_ref - WD_RESET_DROP
+            frozen = (not moving) and mot_ref is not None and h["motion"] < WD_FREEZE_FRAC * mot_ref
+            fault = "hard reset" if reset else "freeze" if frozen else None
+            score = h.get("continuity", 1.0) + (0.0 if frozen else 0.5)
+            rec = {"chunk": s.chunk_id - 1, "label": label, "attempt": attempt, "fault": fault,
+                   "continuity": round(h.get("continuity", float("nan")), 3), "motion": round(h["motion"], 4),
+                   "continuity_ref": cont_ref, "motion_ref": mot_ref}
+            self.watch.append(rec)
+            if best is None or score > best[0]:
+                best = (score, attempt, s.export(), new, h)
+            if fault is None or snap is None or attempt == retries:
+                break
+            s.load(snap)            # undo the chunk
+            snap = s.fork()         # keep a clean copy for the next attempt
+            s.reseed(1000 * (attempt + 1) + s.chunk_id)
+        if best[1] != attempt:      # an earlier attempt was the healthiest: reinstate it
+            s.load(best[2])
+            new, h = best[3], best[4]
+            self.watch.append({"chunk": s.chunk_id - 1, "label": label, "kept_attempt": best[1]})
+        if "continuity" in h:
+            self.wd_cont.append(h["continuity"])
+        if not moving:
+            self.wd_motion.append(h["motion"])
+        return new
+
     def _maybe_settle(self):
         """If the camera has been away and its measured heading is back at the start,
         finish exactly on the starting orientation and hold. Triggered by geometry
@@ -616,6 +666,10 @@ class Episode:
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "cfg": self.cfg, "brief": self.brief,
+                "watchdog": {"faults": sum(1 for w in self.watch if w.get("fault")),
+                             "repaired": sum(1 for w in self.watch if w.get("fault") is None and w.get("attempt", 0) > 0),
+                             "trace": [w for w in self.watch if w.get("fault") or w.get("attempt", 0) > 0
+                                       or "kept_attempt" in w]},
                 "memory_entries": self.memory_entries, "flags": self.flags,
                 "anchored": self.anchor, "guide_via": self.guide_via,
                 "chunks": s.chunk_id, "seconds": round(len(self.frames) / FPS, 2),
