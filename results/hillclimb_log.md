@@ -67,3 +67,21 @@ Lessons:
   out-of-sight mean (2.23) leans on that one judging; every changed configuration sits near 1.0-1.6.
 - GC010's baseline video has now been judged 1.0, 5.0 and 4.2.
 - The one effect outside the noise remains: the objective in the prompt lifts interaction (2.15 to 3.63 and 2.60).
+
+## State-write sweeps, judged from frame strips by the orchestrating model (00:00-01:00, 15 Nov)
+
+No Gemini calls. `scripts/view_grid.py <run> <case>` rebuilds every strip from the volume. Scores here are the
+orchestrator's reading of the frames against the public rubric wording, not benchmark scores.
+
+| sweep | write | cases | what the frames show | verdict |
+|---|---|---|---|---|
+| sweep1 | residual add / ablate, all sampling steps | 4 | add >= 0.03 and every ablation: colour cast growing into collapse. add 0.01 or one layer: clean, more motion | broken as written |
+| sweep6 | same, limited to sampling steps 0-1, not in the cache pass | 4 | add 0.03 on steps 0-1: clean and sharp, motion x3. All steps without the cache pass: still collapses. So the late steps were the cause | fixed |
+| sweep3 | forward translation x2, x4, x8 | 4 | x8 is noise in one chunk. Upstream normalises translation to a maximum of 1.0, so >1 is outside the model's input range | not a bug; keep 1.0 |
+| sweep2 | objective in its own cross-attention register, attention gain 1-16 | 6 IF | gain >= 4 completes the action on 3 cases where the incumbent does not (slope, pond, river). Gain 1 = no effect. First-person driving case loses the car at gain >= 4 | keep, third-person only |
+| sweep7 | same register on GC / OE (camera-instruction objectives) | 6 | at gain 4-8 the word "camera" materialises a camera on a tripod | off for first-person |
+| win* | attention window 30/36/42 frames, sink 6/12 | 6 | runs, no visible gain on return-to-start | neutral |
+| sweep4 | latent mean re-anchoring 0.3-0.7 | 6 | GC002: without it the hall drifts to deep blue and dark over 30 s; with it colours hold. OE028: no fade to black. No harm on a clean 30 s scene | keep (0.5) |
+| sweep4 | sink attention gain | 6 | never applied: patched the wrong module (0 hits recorded). Fixed, not yet re-run | re-run |
+| sweep4 | correlated chunk noise 0.5 | 6 | no clear change | drop |
+| sweep5 | memory through the image-condition channel | 6 | returns to the start view where latent pasting did not, but with ghosting and block artifacts | needs work |

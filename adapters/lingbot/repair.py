@@ -23,7 +23,9 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools"))
 
-ALIVE = {"file": "alive.npz", "alpha": 0.1, "layers": [19]}     # the one residual write that stayed clean
+# The residual write that stays clean: early sampling steps only. Written on the late steps
+# (which set colour and detail) the same vector compounds into a colour collapse.
+ALIVE = {"file": "alive.npz", "alpha": 0.03, "steps": [0, 1], "cache": False}
 MAX_GAIN, MIN_GAIN = 16.0, 1.0
 
 
