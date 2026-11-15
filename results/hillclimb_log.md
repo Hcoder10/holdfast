@@ -254,3 +254,20 @@ The per-dimension "overall" printed by the tally for this set is not meaningful:
 |---|---|---|
 | sweep21 (21 cases x 3, 7 GPUs) and sweep21b (planner arm again, 5 GPUs) | 8 | $36 |
 | sweep22: shadow world vs first-frame pin vs base, 11 turn-and-return cases (6 GPUs) | 4.5 | $20 |
+
+### Launch-time planner, run properly (sweep21b, 06:45): worse, because it trusted a write that hurts
+
+Same 21 cases, two passes (through OpenRouter; the other arms through the direct key, same model and prompts).
+
+| arm | 15 frozen cases | 6 controls | all 21 |
+|---|---|---|---|
+| cohesive base | 1.87 | 3.00 | 2.19 |
+| + alive always on at 0.03 | 1.93 | 2.45 | 2.08 |
+| planner-chosen program | 1.38 | 2.11 | 1.59 |
+
+The planner made sensible register choices (8 on the four third-person cases, 0 elsewhere) and kept re-anchoring on.
+But its menu described the alive write as a fix for freezing, as the orchestrator believed from frames, so it turned
+it on for every case: 0.03 on eleven and 0.06 on ten, never 0. Per case it lost 0.60 against the base. Read with the
+always-on arm, the dose-response is clear: none 2.19, 0.03 everywhere 2.08, mostly 0.06 1.59. The residual "alive"
+write lowers judged scores. A decision model is only as good as the measured effects in its menu; this menu entry
+was a belief, not a measurement.

@@ -1,0 +1,258 @@
+{
+ "per_case": {
+  "IF007": [
+   4.0,
+   3.5
+  ],
+  "OE072": [
+   1.0,
+   1.0
+  ],
+  "OE020": [
+   1.0,
+   1.0
+  ],
+  "OE046": [
+   5.0,
+   1.0
+  ],
+  "OE005": [
+   1.0,
+   1.0
+  ],
+  "IF023": [
+   3.0,
+   4.0
+  ],
+  "OE008": [
+   4.8,
+   1.0
+  ],
+  "OE063": [
+   1.0,
+   1.0
+  ],
+  "IF006": [
+   1.0,
+   2.0
+  ],
+  "IF011": [
+   1.0,
+   2.0
+  ],
+  "OE010": [
+   1.2,
+   1.0
+  ],
+  "OE006": [
+   1.0,
+   1.0
+  ],
+  "OE017": [
+   1.0,
+   1.0
+  ],
+  "OE028": [
+   1.0,
+   1.0
+  ],
+  "OE040": [
+   1.0,
+   1.0
+  ],
+  "OE043": [
+   1.0,
+   1.0
+  ],
+  "OE011": [
+   1.0,
+   1.0
+  ],
+  "OE002": [
+   1.0,
+   1.0
+  ],
+  "OE032": [
+   1.0,
+   1.0
+  ],
+  "GC033": [
+   4.8,
+   1.0
+  ],
+  "OE009": [
+   1.0,
+   1.4
+  ]
+ },
+ "decisions": [
+  [
+   "IF006",
+   8,
+   0.06,
+   0.5,
+   -1.0,
+   "A visible character must initiate walking from a standing position into the pond"
+  ],
+  [
+   "IF011",
+   8,
+   0.06,
+   0.5,
+   0.5,
+   "A visible person must walk forward from a standing start toward a distant landma"
+  ],
+  [
+   "IF023",
+   8,
+   0.06,
+   0.5,
+   0.5,
+   "Woman must walk forward from standing position along the path; subject is visibl"
+  ],
+  [
+   "OE011",
+   0,
+   0.03,
+   0.5,
+   -2.0,
+   "First-person viewpoint with instruction to 'wait and observe' requires low actio"
+  ],
+  [
+   "OE020",
+   0,
+   0.03,
+   0.5,
+   -2.5,
+   "First-person viewpoint with instruction to wait and observe a static architectur"
+  ],
+  [
+   "OE028",
+   0,
+   0.06,
+   0.5,
+   0.0,
+   "First-person camera instruction (turn and step back) with a dynamic launch proce"
+  ],
+  [
+   "OE032",
+   0,
+   0.06,
+   0.5,
+   0.0,
+   "First-person camera movement requested (walk forward, tilt) requires action_regi"
+  ],
+  [
+   "OE040",
+   0,
+   0.06,
+   0.5,
+   -1.0,
+   "First-person viewpoint with 'wait and observe' instruction means low action_regi"
+  ],
+  [
+   "OE043",
+   0,
+   0.03,
+   0.5,
+   0.0,
+   "First-person camera movement requested (pan left then return), so action_registe"
+  ],
+  [
+   "OE046",
+   0,
+   0.03,
+   0.5,
+   2.0,
+   "First-person camera instruction (turn left then back) requires action_register=0"
+  ],
+  [
+   "OE072",
+   0,
+   0.06,
+   0.5,
+   -0.5,
+   "First-person viewpoint with instruction to wait and observe; man is seated and s"
+  ],
+  [
+   "OE017",
+   0,
+   0.06,
+   0.5,
+   0.0,
+   "First-person camera instruction to turn left then back; drawing action must visi"
+  ],
+  [
+   "OE006",
+   0,
+   0.06,
+   0.5,
+   -1.0,
+   "First-person viewpoint with instruction to wait and observe; customer at checkou"
+  ],
+  [
+   "OE009",
+   0,
+   0.03,
+   0.5,
+   -0.8,
+   "First-person viewpoint with instruction to wait and observe; pedestrians already"
+  ],
+  [
+   "OE002",
+   0,
+   0.03,
+   0.5,
+   -1.5,
+   "First-person viewpoint with instruction to wait and observe; calm scene with goa"
+  ],
+  [
+   "OE005",
+   0,
+   0.03,
+   0.5,
+   -2.0,
+   "First-person viewpoint with instruction to 'wait and observe' requires action_re"
+  ],
+  [
+   "OE008",
+   0,
+   0.03,
+   0.5,
+   -0.3,
+   "First-person viewpoint with instruction to 'wait and observe' a crowded scene th"
+  ],
+  [
+   "OE010",
+   0,
+   0.03,
+   0.5,
+   -2.2,
+   "First-person viewpoint with instruction to wait and observe; pedestrians are mid"
+  ],
+  [
+   "IF007",
+   8,
+   0.06,
+   0.5,
+   0.8,
+   "The boy is a visible subject who must initiate walking down the stairs from a st"
+  ],
+  [
+   "OE063",
+   0,
+   0.03,
+   0.5,
+   -1.5,
+   "First-person viewpoint with instruction to observe; truck already in motion on t"
+  ],
+  [
+   "GC033",
+   0,
+   0.03,
+   0.5,
+   -0.1,
+   "First-person camera instruction to turn and return; modest risk of freezing duri"
+  ]
+ ]
+}
