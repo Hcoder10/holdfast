@@ -574,6 +574,19 @@ class Episode:
     def run(self, case, image, seed=0):
         s = self.s
         self.caption = case["image_caption"]
+        if self.cfg.get("steer") or self.cfg.get("record_acts"):
+            probe = s.enable_probe()
+            probe.set_steer({})
+            if self.cfg.get("steer"):
+                # {"file": npz of {layer: vector} under results/steer, "alpha": strength}
+                import os as _os
+                st_cfg = self.cfg["steer"]
+                path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "..", "results",
+                                     "steer", st_cfg["file"])
+                vecs = np.load(path)
+                probe.set_steer({int(k): vecs[k] for k in vecs.files}, st_cfg.get("alpha", 1.0))
+        elif getattr(s, "probe", None) is not None:
+            s.probe.set_steer({})
         for k in ("erode", "feather"):          # guidance blend widths, read by the stepper
             if k in self.cfg:
                 setattr(s, k, int(self.cfg[k]))

@@ -210,6 +210,7 @@ class LingBotStepper:
         self.gen = torch.Generator(device=self.device)
         self.gen.manual_seed(seed)
         self.latents = []       # one [16, 3, h, w] tensor per chunk
+        self.acts = []          # one [n_layers, C] activation tensor per chunk, if a probe is attached
         self.rel_poses = []     # one [3, 4, 4] array per chunk, as supplied
         self.prompts = []       # prompt used for each chunk
         self.chunk_id = 0
@@ -266,6 +267,42 @@ class LingBotStepper:
                 soft = torch.nn.functional.avg_pool2d(p, 3, stride=1)
             m = torch.minimum(m, soft[0] * soft[0])
         return lat.float(), m[None]
+
+    # ------------------------------------------------------- activations in and out
+    def enable_probe(self):
+        """Attach the residual-stream probe (see acts.py). Idempotent."""
+        if getattr(self, "probe", None) is None:
+            import acts
+            self.probe = acts.Probe(self.pipe.model)
+        return self.probe
+
+    @torch.no_grad()
+    def observe(self, lat):
+        """Feed an existing chunk of latents ([16,3,h,w]) through the model as context,
+        without sampling: one clean pass that records activations and writes the
+        attention cache. Used to replay a finished video and read what the model's
+        internals looked like for it."""
+        p = self.pipe
+        kwargs = {
+            "context": [self.context[0]], "seq_len": self.max_seq_len,
+            "y": [self._condition(self.chunk_id)],
+            "dit_cond_dict": {"c2ws_plucker_emb": self._plucker(np.stack([np.eye(4)] * CHUNK)).chunk(1, dim=0)},
+            "kv_cache": self.self_cache, "crossattn_cache": self.cross_cache,
+            "current_start": self.chunk_id * CHUNK * self.frame_seqlen,
+            "max_attention_size": self.kv_size, "frame_seqlen": self.frame_seqlen,
+        }
+        probe = self.enable_probe()
+        probe.record = True
+        with torch.amp.autocast("cuda", dtype=p.param_dtype):
+            p.model(x=[lat.to(self.device)], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
+                    cross_attn_first_call=self.cross_first, **kwargs)
+        self.cross_first = False
+        probe.record = False
+        a = probe.take()
+        if a is not None:
+            self.acts.append(a.half())
+        self.latents.append(lat.float().to(self.device))
+        self.chunk_id += 1
 
     # ------------------------------------------------------------- self-inspection
     def chunk_health(self):
@@ -441,8 +478,16 @@ class LingBotStepper:
             if g is not None and guide_hard:
                 x0 = (g[1] * g[0] + (1 - g[1]) * x0).to(x0.dtype)
             # write the clean chunk into the attention cache
+            probe = getattr(self, "probe", None)
+            if probe is not None:
+                probe.record = True
             p.model(x=[x0], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
                     cross_attn_first_call=False, **kwargs)
+            if probe is not None:
+                probe.record = False
+                a = probe.take()
+                if a is not None:
+                    self.acts.append(a.half())
         return x0
 
     # ---------------------------------------------------------------- decode

@@ -126,6 +126,85 @@ def generate_bg(job_json: str, shards: int = 4):
     print("spawned", call.object_id, "for", len(job["cases"]), "cases")
 
 
+@app.function(gpu="H200", volumes={W: weights, R: runs}, timeout=5 * 3600, cpu=8, memory=98304)
+def replay_shard(items: list, shard: int = 0):
+    """Replay finished videos through the model and save its per-chunk activations.
+
+    For each (run, mode folder, task): the stored video is VAE-encoded and fed back
+    chunk by chunk as context (one clean pass each, no sampling). Saved to
+    /runs/acts/<run>/<mode>/<task>.npz: acts [chunks, layers, C], plus the latent
+    motion and continuity of every chunk. Camera motion is not replayed (identity
+    poses), which is an approximation."""
+    import sys
+    import imageio
+    import numpy as np
+    import torch
+    from PIL import Image
+    sys.path.insert(0, "/wh/adapters/lingbot")
+    from stepper import CHUNK, LingBotStepper
+    import jobs
+    stepper = LingBotStepper("/opt/lingbot-world-v2", CKPT, task="i2v-A14B")
+    stepper.enable_probe()
+    done = 0
+    for run, mode, task in items:
+        out = f"{R}/acts/{run}/{mode}/{task}.npz"
+        video = f"{R}/{run}/{mode}/{task}/video.mp4"
+        if os.path.exists(out) or not os.path.exists(video):
+            continue
+        try:
+            frames = np.stack(imageio.mimread(video, memtest=False))
+            split, case = jobs.find_case(DATA, task)
+            stepper.reset(Image.open(jobs.image_for(DATA, split, case)), case["image_caption"], seed=0)
+            n_lat = (len(frames) - 1) // 4 + 1
+            n_lat -= n_lat % CHUNK
+            frames = frames[:(n_lat - 1) * 4 + 1]
+            v = torch.from_numpy(frames).to(stepper.device).permute(3, 0, 1, 2).float() / 127.5 - 1
+            with torch.no_grad():
+                lat = stepper.pipe.vae.encode([v])[0]
+            del v
+            motion, cont = [], []
+            for k in range(n_lat // CHUNK):
+                c = lat[:, k * CHUNK:(k + 1) * CHUNK]
+                motion.append(float((c[:, -1] - c[:, 0]).abs().mean() / (c.abs().mean() + 1e-6)))
+                cont.append(float("nan") if k == 0 else float(torch.nn.functional.cosine_similarity(
+                    lat[:, k * CHUNK - 1].flatten(), c[:, 0].flatten(), dim=0)))
+                stepper.observe(c)
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            np.savez_compressed(out, acts=torch.stack(stepper.acts).numpy(), motion=np.array(motion),
+                                continuity=np.array(cont))
+            done += 1
+            if done % 10 == 0:
+                runs.commit()
+                print(f"[replay {shard}] {done} saved", flush=True)
+        except Exception as e:
+            print(f"[replay {shard}] {run}/{mode}/{task} FAILED {e!r}", flush=True)
+    runs.commit()
+    return done
+
+
+@app.function(volumes={R: runs}, timeout=6 * 3600)
+def orchestrate_replay(run_names: list, shards: int):
+    runs.reload()
+    items = []
+    for run in run_names:
+        base = f"{R}/{run}"
+        if not os.path.isdir(base):
+            continue
+        for mode in sorted(os.listdir(base)):
+            for task in sorted(os.listdir(f"{base}/{mode}")):
+                if os.path.exists(f"{base}/{mode}/{task}/video.mp4"):
+                    items.append((run, mode, task))
+    print(len(items), "videos to replay")
+    parts = [items[i::shards] for i in range(shards)]
+    return sum(replay_shard.starmap([(p, i) for i, p in enumerate(parts) if p]))
+
+
+@app.local_entrypoint()
+def replay(runs_csv: str, shards: int = 8):
+    call = orchestrate_replay.spawn(runs_csv.split(","), shards)
+    print("spawned", call.object_id)
+
+
 @app.local_entrypoint()
 def judge_inputs(run: str):
     print(judge_inputs_remote.remote(run))
