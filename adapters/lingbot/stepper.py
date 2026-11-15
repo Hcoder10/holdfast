@@ -265,6 +265,32 @@ class LingBotStepper:
             m = torch.minimum(m, soft[0] * soft[0])
         return lat.float(), m[None]
 
+    # ------------------------------------------------------------ forked rollouts
+    _STATE = ("self_cache", "cross_cache", "context", "prompt", "regional", "spans", "subject_span",
+              "latents", "rel_poses", "prompts", "chunk_id", "gen", "shown", "cross_first")
+
+    def export(self):
+        """The live generation state, by reference (no copy)."""
+        return {k: getattr(self, k, None) for k in self._STATE}
+
+    def load(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
+
+    def fork(self):
+        """A copy of the generation state at this moment: attention cache, latents,
+        text condition and noise stream. A second rollout can be continued from it
+        with `load`, independently of the first. Costs one more attention cache."""
+        st = self.export()
+        st["self_cache"] = [{k: v.clone() for k, v in layer.items()} for layer in self.self_cache]
+        st["cross_cache"] = [{k: (v.clone() if torch.is_tensor(v) else v) for k, v in layer.items()}
+                             for layer in self.cross_cache]
+        st["latents"], st["rel_poses"], st["prompts"] = list(self.latents), list(self.rel_poses), list(self.prompts)
+        g = torch.Generator(device=self.device)
+        g.set_state(self.gen.get_state())
+        st["gen"] = g
+        return st
+
     # ------------------------------------------------------ memory via attention
     @torch.no_grad()
     def write_sink(self, lat):

@@ -22,7 +22,8 @@ import numpy as np
 
 from director import facing_start
 from odometry import intrinsics_matrix, relative_rotation
-from panorama import RotationMemory, view_footprint
+import cv2
+from panorama import RotationMemory, rot, view_footprint
 from player import FROM_KIND, TO_KIND
 from stepper import CHUNK, FPS, rel_pose
 
@@ -33,6 +34,8 @@ YAW_PER_TOKEN = 22.5     # "turn 90 degrees" is written as 4 tokens in the datas
 PITCH_PER_TOKEN = 10.0   # "tilt 30 degrees" is written as 3 tokens
 MAX_YAW_PER_CHUNK = 30.0
 MAX_STEPS = 40          # PlayWorld's interaction budget
+NEUTRAL_AWAY = ("The surrounding area of the same place, continuing naturally in every direction, "
+                "in the same style, lighting and weather.")
 MAX_AGENT_EXTRA = 2     # agent-added chunks allowed after each preset segment
 MIN_INLIERS = 30        # feature matches needed to trust a rotation measurement
 ASSUMED_GAIN = 1.0      # achieved / commanded rotation when nothing is measured or remembered
@@ -156,6 +159,9 @@ class Episode:
         self.trust_command = False
         self.gains = []               # reliable achieved/commanded yaw ratios this episode
         self.been_away = False        # has the starting view left the frame since we stood here
+        self.shadow = None            # forked rollout still watching the starting view
+        self.shadow_chunks = 0
+        self.caption = ""
         self.prior_gain = ASSUMED_GAIN
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
@@ -194,6 +200,8 @@ class Episode:
                                         for i in range(12)])
                     if np.mean(masks) > 0.10:
                         guide = (np.stack(imgs), np.stack(masks))
+        if "shadow" in self.flags and self.mode == "memory" and move is None and self.frames:
+            guide = self._shadow(guide, yaw, pitch)
         prompt = stage = None
         if self.timeline is not None:
             t = len(self.frames) / FPS
@@ -218,6 +226,14 @@ class Episode:
                                                self.yaw + yaw * (j + 1) / CHUNK,
                                                self.pitch + pitch * (j + 1) / CHUNK, hy, hp)
                                 for j in range(CHUNK)]) for hy, hp in heads]
+        if self.timeline is None and "anchor" in self.flags and move is None:
+            # no language model in the loop: the caption is bound to the starting
+            # view's footprint, and a neutral description covers everything else
+            self.s.set_anchored(NEUTRAL_AWAY, [self.caption])
+            region = [np.stack([view_footprint(self.K, self.s.w, self.s.h,
+                                               self.yaw + yaw * (j + 1) / CHUNK,
+                                               self.pitch + pitch * (j + 1) / CHUNK)
+                                for j in range(CHUNK)])]
         new = self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
                           guide_hard=self.guide_hard, region=region, guide_via=self.guide_via)
         prev = self.frames[-1] if self.frames else new[0]
@@ -232,6 +248,7 @@ class Episode:
             # a new standing point: rotational memory starts over from here
             self.last_turn = None
             self.been_away = False
+            self.shadow = None
             self.yaw = self.pitch = self.level_pitch = 0.0
             if self.mem is not None:
                 self.mem.keys = []
@@ -395,6 +412,55 @@ class Episode:
             self._agent_chunk(word)
         return False
 
+    def _shadow(self, guide, yaw, pitch):
+        """Shadow rollout: the starting view keeps running while the camera is away.
+
+        When the camera begins to turn away from the starting view, the generation
+        state is forked. From then on, for every chunk the main rollout makes, the
+        fork makes one too with the camera held still on the starting view, so
+        whatever was happening there carries on by the model's own dynamics. Wherever
+        the starting view's footprint is in the main camera's frame, the main rollout
+        is guided by the fork's frame for that same moment, warped into view. The
+        camera therefore comes back to the scene as it is now, not as it was, and
+        no language model has to guess what happened."""
+        s = self.s
+        y = (self.yaw + 180.0) % 360.0 - 180.0
+        if self.shadow is None:
+            if not (abs(y) < 8.0 and abs(self.pitch) < 8.0 and (yaw or pitch)):
+                return guide
+            self.shadow = s.fork()
+            self.shadow_chunks = 0
+        main = s.export()
+        s.load(self.shadow)
+        region = None
+        if s.regional:
+            ones = np.ones((CHUNK, s.h, s.w), np.uint8)
+            region = [ones] + [np.zeros_like(ones)] * (len(s.spans) - 1)
+        sf = s.step([rel_pose()] * CHUNK, region=region)
+        self.shadow = s.export()
+        s.load(main)
+        self.shadow_chunks += 1
+        imgs = list(guide[0]) if guide is not None else [np.zeros_like(sf[0])] * 12
+        masks = list(guide[1]) if guide is not None else [np.zeros(sf[0].shape[:2], bool)] * 12
+        out_i, out_m = [], []
+        Kinv = np.linalg.inv(self.K)
+        for i in range(12):
+            hy, hp = self.yaw + yaw * (i + 1) / 12, self.pitch + pitch * (i + 1) / 12
+            foot = view_footprint(self.K, s.w, s.h, hy, hp) > 0
+            if foot.any():
+                Hm = self.K @ rot(hy, hp).T @ Kinv
+                warped = cv2.warpPerspective(sf[i], Hm, (s.w, s.h), flags=cv2.INTER_LINEAR)
+                im = imgs[i].copy()
+                im[foot] = warped[foot]
+                out_i.append(im)
+                out_m.append(masks[i] | foot)
+            else:
+                out_i.append(imgs[i])
+                out_m.append(masks[i])
+        if np.mean(out_m) > 0.10:
+            return np.stack(out_i), np.stack(out_m)
+        return guide
+
     def _maybe_settle(self):
         """If the camera has been away and its measured heading is back at the start,
         finish exactly on the starting orientation and hold. Triggered by geometry
@@ -403,6 +469,7 @@ class Episode:
         if self.mode == "memory" and self.been_away and abs(y) < 8.0 and abs(self.pitch) < 8.0:
             self._settle()
             self.been_away = False
+            self.shadow = None   # the main rollout is back on the scene; the fork is no longer needed
 
     def _gain(self):
         """Achieved / commanded rotation to assume when it cannot be measured."""
@@ -438,6 +505,7 @@ class Episode:
     # -- episode -----------------------------------------------------------
     def run(self, case, image, seed=0):
         s = self.s
+        self.caption = case["image_caption"]
         if self.mode != "open" and "nomem" not in self.flags:
             self.prior_gain = recall_gain(self.model_name, ASSUMED_GAIN)
         if "online" in self.flags:
@@ -504,7 +572,7 @@ class Episode:
                 "online": self.timeline.report() if hasattr(self.timeline, "report") else None,
                 "player": None if self.player is None else {"model": self.player.model,
                                                             "trace": self.player.trace},
-                "actions": self.history,
+                "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "memory_entries": self.memory_entries, "flags": self.flags,
                 "anchored": self.anchor, "guide_via": self.guide_via,
                 "chunks": s.chunk_id, "seconds": round(len(self.frames) / FPS, 2),
