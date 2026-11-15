@@ -283,6 +283,7 @@ Each of these was built, run and looked at; details and sweep names are in `resu
 | Exa-derived action sentence in the register for still-camera scenes, constant at gain 8 | Insight 2.40 vs 2.86 on 15 cases, two passes. The judge's reasons: the subject repeats one motion with no accumulated change, or the scene sits in the described state. A sentence that stays on is re-satisfied every chunk |
 | The same as a three-stage timeline (early, middle, late), always on at gain 4 | 2.14 vs 2.51 on the same 15 cases |
 | Exa-derived action sentence as an impulse (gain 8 for the first five chunks, then released) | Development cases 2.75 vs 2.51 (+0.25, interval -0.32 to +0.82); held-out cases 1.90 vs 1.83 (+0.07, -0.41 to +0.66); pooled over 30 cases +0.16 (-0.23 to +0.56), 11 better and 10 worse. Releasing the write removes the harm of holding it on; no measured gain |
+| Camera guidance on sideways steps only (strength 3), on top of landmarks | 12 cases, two passes: -0.22 (interval -0.91 to +0.41), 3 better and 6 worse. The ignored move is executed, but over ten consecutive chunks the motion is over-driven and the model invents content to fill it; one trajectory-gate pass became a fail |
 | Predicting the judge from recorded activations and latent reads | At or below chance at picking the better of two reruns (0.41-0.44 over 238 pairs), although a perfect picker would gain +0.92 |
 
 ## Where it still breaks
@@ -404,6 +405,21 @@ cases reading the memory as of three times: with only the belief it chooses the 
 the measurement and rule, none on 4 of 4; and the same now. That choice is the `act_register` entry of the
 episode's state program, so what the memory holds decides what is written into the model's cross-attention.
 <!-- /ACT-DEMO -->
+
+**Against the common alternatives** (`tools/mem_bench.py`, `results/pastdev_bench.md`). The planner must set four
+controls per scene to the values the benchmark judge measured as best; those findings were made by other agents, so
+it knows them only through memory. Twelve scenes, 48 controls, Claude Haiku:
+
+| How the planner learns what other agents measured | Controls right | Harmful write switched on | Seconds per decision | Prompt per decision |
+|---|---|---|---|---|
+| No shared memory (its own menu of beliefs) | 37 of 48 (77%) | 11 of 12 scenes | 1.5 | about 780 tokens |
+| The whole shared log pasted into the prompt (68 notes) | 48 of 48 (100%) | 0 of 12 | 2.1 | about 6,480 tokens |
+| past.dev recall (author, kind, time, supersededAt) | 44 of 48 (92%) | 0 of 12 | 3.2 | about 1,350 tokens |
+
+Accuracy is 15 points above no shared memory and 8 below pasting everything; the four misses are one rule (no
+request gain on first-person scenes) that recall did not surface for those scenes. The prompt is about a fifth
+the size of the pasted log, which grows with every note while recall does not. Latency is not a gain at this
+log size: the recall round trip makes it the slowest of the three. One run, twelve scenes.
 
 ## Exa challenge
 

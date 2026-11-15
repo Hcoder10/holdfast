@@ -324,6 +324,14 @@ class Episode:
             dx, dz = {"forward": (fx, fz), "back": (-fx, -fz), "strafe_right": (fz, -fx), "strafe_left": (-fz, fx)}[move]
             lm["pos"] = [cur[0] + dx, cur[1] + dz]
         tpos = tuple(lm["pos"])
+        if agent and lm.get("hold") is not None and getattr(self, "_key", None) is None and lm.get("check"):
+            # The camera has arrived at a checkpoint and the agent player is topping up the move that got it
+            # there: keep the view on the checkpoint instead of sliding past it.
+            self._key = (lm["hold"], CHUNK - 1, None)
+            lm["held"] = lm.get("held", 0) + 1
+            return
+        if not agent:
+            lm["hold"] = None
         if getattr(self, "_key", None) is not None or kind == "wait" or agent or self.s.chunk_id < 3:
             return
         ty = (self.ayaw + yaw + 180.0) % 360.0 - 180.0
@@ -341,9 +349,31 @@ class Episode:
                     max(abs((e["yaw"] - cy + 180.0) % 360.0 - 180.0), abs(e["pitch"] - cp)) <= lm["tol"])
             if d <= lm["tol"] and not here and (best is None or d < best[0]):
                 best = (d, e)
+        if best is not None and lm.get("check"):
+            # Read before writing: is the picture actually near this checkpoint? The scripted position can come
+            # back to a checkpoint while the view is somewhere else (an orbit rendered from sideways steps).
+            # The checkpoint must be among the stored views most similar to the latent on screen now.
+            import torch
+
+            def feat(x):
+                f = torch.nn.functional.adaptive_avg_pool2d(x.float(), (12, 20))
+                f = f - f.mean(dim=(1, 2), keepdim=True)
+                return torch.nn.functional.normalize(f.flatten(), dim=0)
+            now = feat(self.s.latents[-1][:, CHUNK - 1])
+            old = [v for v in b["views"] if v["chunk"] <= self.s.chunk_id - lm["min_age"]]
+            sims = sorted((float(now @ feat(v["lat"][:, CHUNK - 1])) for v in old), reverse=True)
+            cand = best[1]
+            cs = float(now @ feat(cand["frame"] if "frame" in cand else cand["lat"][:, CHUNK - 1]))
+            rank = sum(1 for x in sims if x > cs + 1e-6)
+            ok = rank < max(2, (len(sims) + 2) // 3)
+            lm.setdefault("checks", []).append({"at_chunk": self.s.chunk_id, "sim": round(cs, 3), "rank": rank,
+                                                "of": len(sims), "written": ok})
+            if not ok:
+                best = None
         if best is not None:
             e = best[1]
             self._key = (e["frame"] if "frame" in e else e["lat"][:, CHUNK - 1].clone(), CHUNK - 1, None)
+            lm["hold"] = self._key[0]
             lm["pins"] += 1
             b["reads"].append({"at_chunk": self.s.chunk_id, "via": "landmark", "from_chunk": best[1]["chunk"],
                                "offset_deg": round(best[0], 1), "by": kind})
@@ -991,6 +1021,7 @@ class Episode:
                 lc = bc["landmarks"]
                 self.bank["landmarks"] = {"tol": float(lc.get("tol", 12.0)), "min_age": int(lc.get("min_age", 5)),
                                           "pos_tol": float(lc.get("pos_tol", 0.5)), "pins": 0, "last_kind": "start",
+                                          "check": bool(lc.get("check")), "hold": None,
                                           "pos": [0.0, 0.0]}
             if bc.get("evolve") and (case.get("perspective") or "").strip().lower() != "third person":
                 import outsight
@@ -1128,7 +1159,8 @@ class Episode:
                     "unseen_chunks_run": self.bank["shadow_total"],
                     "landmarks": None if not self.bank.get("landmarks") else {
                         "kept": sum(1 for v in self.bank["views"] if v.get("sig")),
-                        "pins": self.bank["landmarks"]["pins"]}},
+                        "pins": self.bank["landmarks"]["pins"], "held": self.bank["landmarks"].get("held", 0),
+                        "checks": self.bank["landmarks"].get("checks")}},
                 "ret": None if not getattr(self, "ret", None) else {
                     "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
                     "sink": self.ret["sink"], "bias_hits": __import__("sdpa_shim").BIAS_HITS, "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),

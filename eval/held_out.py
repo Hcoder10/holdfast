@@ -46,6 +46,9 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         "sw27": {"baseline": "sweep27:lingbot2_14b_open_anchor", "final": "sweep27:lingbot2_14b_open_act8"},
         # shadow-world arm on the development half's first-person cases
         "v2dev": {"final": "final2dev"},
+        # landmarks with a similarity check before writing and a hold through the agent's top-up steps, on all 19
+        # landmark cases; the control is the shadow-world arm of sweep31 and sweep33 (same clips, judged again here)
+        "sw35": {"baseline": "sweep31+sweep33:lingbot2_14b_open_shadow", "final": "sweep35:lingbot2_14b_open_lm2"},
         # 12 cases with sideways steps (5 development, 7 held-out): landmarks, and landmarks + camera guidance on the
         # sideways chunks only
         "sw34": {"baseline": "sweep34:lingbot2_14b_open_lm", "final": "sweep34:lingbot2_14b_open_lmcam"},
@@ -69,7 +72,7 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
                  "final": "sweep22:lingbot2_14b_open_shadow"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2", "sw28": "sweep28", "sw29": "sweep29", "sw30": "sweep31", "sw32": "sweep32", "sw31": "sweep31_full", "sw33": "sweep33", "sw34": "sweep34"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b", "sw22": "sweep22", "sw24": "sweep24", "sw26": "sweep26", "sw27": "sweep27", "v2dev": "dev_half_v2", "sw28": "sweep28", "sw29": "sweep29", "sw30": "sweep31", "sw32": "sweep32", "sw31": "sweep31_full", "sw33": "sweep33", "sw34": "sweep34", "sw35": "sweep35"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 
