@@ -535,7 +535,12 @@ class LingBotStepper:
         with torch.amp.autocast("cuda", dtype=p.param_dtype):
             pr = getattr(self, "probe", None)
             ss = self.tune.get("steer_steps")          # sampling steps that receive the residual write
+            ssa = self.tune.get("ssa")                  # spectral self-anchoring, see sdpa_shim.SSA
             for i, t in enumerate(self.timesteps):
+                sdpa_shim.SSA = None
+                if ssa and i in ssa.get("steps", (0, 1)):
+                    sdpa_shim.SSA = (self.sink_frames * self.frame_seqlen, float(ssa.get("lam", 0.6)),
+                                     float(ssa.get("sigma", 0.125)), (CHUNK, self.lat_h // 2, self.lat_w // 2))
                 if pr is not None:
                     pr.gate = ss is None or i in ss
                 if g is not None and i >= guide_from:
@@ -552,6 +557,7 @@ class LingBotStepper:
                     noise = torch.randn(x0.shape, generator=self.gen,
                                         device=x0.device, dtype=x0.dtype)
                     latent = p.scheduler.add_noise(x0, noise, self.timesteps[i + 1])
+            sdpa_shim.SSA = None
             if g is not None and guide_hard:
                 x0 = (g[1] * g[0] + (1 - g[1]) * x0).to(x0.dtype)
             lam = float(self.tune.get("anchor_stats", 0.0) or 0.0)

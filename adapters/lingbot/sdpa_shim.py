@@ -69,6 +69,31 @@ SELF_DIAG_ON = False
 SELF_DIAG = []
 
 
+# Spectral self-anchoring (after FreqForcing, arXiv 2607.27110, found by loop/scout.py through Exa).
+# When set to (n_sink_tokens, lam, sigma, (frames, h, w)), the cached self-attention is computed twice:
+# over the whole cache (local branch) and over the sink alone (anchor branch). The low spatio-temporal
+# frequencies of the anchor branch's output replace, with weight lam, those of the local branch's:
+#     out = local + lam * lowpass(anchor - local)
+# with a Gaussian low-pass of width sigma in normalised frequency. The stepper sets it only for the
+# sampling steps named in the configuration (the paper uses the first two).
+SSA = None
+SSA_HITS = 0
+
+
+def _lowpass(x, grid, sigma):
+    """x: [B, N, L, C] with L = frames*h*w. Gaussian low-pass over (t, h, w)."""
+    b, n, l, c = x.shape
+    f, h, w = grid
+    y = x.float().reshape(b, n, f, h, w, c)
+    Y = torch.fft.fftn(y, dim=(2, 3, 4))
+    ft = torch.fft.fftfreq(f, device=x.device).view(f, 1, 1)
+    fh = torch.fft.fftfreq(h, device=x.device).view(1, h, 1)
+    fw = torch.fft.fftfreq(w, device=x.device).view(1, 1, w)
+    g = torch.exp(-(ft ** 2 + fh ** 2 + fw ** 2) / (2 * sigma ** 2))
+    y = torch.fft.ifftn(Y * g.view(1, 1, f, h, w, 1), dim=(2, 3, 4)).real
+    return y.reshape(b, n, l, c).to(x.dtype)
+
+
 def self_attention(q, k, v, **kw):
     """Stand-in for wan.modules.attention.attention as used by the cached self-attention
     (its SDPA branch), plus the optional sink gain."""
@@ -91,8 +116,14 @@ def self_attention(q, k, v, **kw):
             top = logits.softmax(-1).max(-1).values.mean().item()
             SELF_DIAG.append({"hit": SELF_HITS, "lk": lk, "sink_share_plain": round(plain, 4),
                               "sink_share_with_gain": round(biased, 4), "mean_top1_weight": round(top, 4)})
-    out = F.scaled_dot_product_attention(q.transpose(1, 2).to(dtype), k.transpose(1, 2).to(dtype),
-                                         v.transpose(1, 2).to(dtype), attn_mask=mask)
+    qt, kt, vt = q.transpose(1, 2).to(dtype), k.transpose(1, 2).to(dtype), v.transpose(1, 2).to(dtype)
+    out = F.scaled_dot_product_attention(qt, kt, vt, attn_mask=mask)
+    sa = SSA
+    if sa is not None and lk >= sa[0] + 2 * lq and lq == sa[3][0] * sa[3][1] * sa[3][2]:
+        global SSA_HITS
+        SSA_HITS += 1
+        anc = F.scaled_dot_product_attention(qt, kt[:, :, :sa[0]], vt[:, :, :sa[0]])
+        out = out + sa[1] * _lowpass(anc - out, sa[3], sa[2])
     return out.transpose(1, 2).contiguous()
 
 

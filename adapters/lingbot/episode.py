@@ -828,7 +828,7 @@ class Episode:
             self.memory_entries = recall_entries(case["task_id"])
         first_prompt = self.timeline.prompt_at(0) if self.timeline else case["image_caption"]
         s.reset(image, first_prompt, seed=seed)
-        s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho", "cam_gain") if k in self.cfg}
+        s.tune = {k: self.cfg[k] for k in ("anchor_stats", "sink_gain", "noise_rho", "cam_gain", "ssa") if k in self.cfg}
         if getattr(s, "camguide", None) is not None:
             s.camguide.calls = 0
         _shim = __import__("sdpa_shim")
@@ -965,6 +965,7 @@ class Episode:
                     "trace": self.ret["trace"]},
                 "sink_diag": list(__import__("sdpa_shim").SELF_DIAG),
                 "cam_guided_calls": getattr(getattr(s, "camguide", None), "calls", 0),
+                "ssa_hits": __import__("sdpa_shim").SSA_HITS,
                 "tune": dict(s.tune, self_hits=__import__("sdpa_shim").SELF_HITS, cond_writes=s.cond_writes,
                              residual_writes=getattr(getattr(s, "probe", None), "writes", 0)),
                 "register": None if not self.register else dict(
