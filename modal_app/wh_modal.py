@@ -70,7 +70,10 @@ def generate_shard(job: dict, shard: int = 0):
     t0 = time.time()
     from stepper import LingBotStepper
     import jobs
-    stepper = LingBotStepper("/opt/lingbot-world-v2", CKPT, task="i2v-A14B")
+    # attention memory: frames kept in the self-attention cache (total, of which `sink` are
+    # the episode's first frames, never evicted). Upstream default 18 and 6.
+    stepper = LingBotStepper("/opt/lingbot-world-v2", CKPT, task="i2v-A14B",
+                             local_attn_size=int(job.get("local_attn", 18)), sink_size=int(job.get("sink", 6)))
     print(f"shard {shard}: model loaded in {time.time() - t0:.0f}s", flush=True)
     job = dict(job, out=f"{R}/{job['out']}")
     if job.get("timelines"):
