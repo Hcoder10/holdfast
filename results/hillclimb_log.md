@@ -346,3 +346,11 @@ judging per video with about half a point of repeat noise; activations pooled ov
 Checks requested on the two negative results: the noise-flow write ran on every commanded chunk (7 of 7, 12 of 12
 logged); the ledger pinned 0.36-0.90 of the frame and the judge's reason on its dropped cases is that the subject
 left unpinned stayed frozen ("the box failed to evolve"), i.e. the premise failed, not the code.
+
+### Shadow world with the unseen copy steered by the Exa sentence (sweep26, 10:10)
+
+14 development out-of-sight turn-and-return cases, both arms generated fresh, two Gemini passes (repeat spread 0.18).
+Shadow world 2.05; with the unseen copy given the later-state sentence at gain 8: 2.16. Paired difference +0.11,
+95% interval -0.77 to +0.95; 6 cases better, 4 worse, 4 unchanged. The swings are large in both directions (1.0 to
+4.5 and 1.5 to 3.8 one way; 4.5 to 1.0 and 3.8 to 2.0 the other), so on 14 cases this is not distinguishable from
+no effect. Not kept in any reported configuration.

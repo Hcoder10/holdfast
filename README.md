@@ -190,6 +190,7 @@ Each of these was built, run and looked at; details and sweep names are in `resu
 | Object ledger: write-back limited to the regions an agent calls static, Exa sentence for the rest | 1.55 vs 1.88 for the whole-frame write-back on 11 cases; the subject left unpinned stayed frozen. Its critic called every object fine on cases the judge scored 1 |
 | Launch-time planner (a small LLM choosing the program) | 1.59 vs 2.19 on 21 cases: its menu described the alive write as a fix, so it switched it on everywhere |
 | Motion written into the starting noise (frames warped by the commanded move) | Ran on every commanded chunk; no advance on the stuck cases |
+| Steering only the unseen copy with the Exa sentence (shadow world) | 2.16 vs 2.05 on 14 cases, interval -0.77 to +0.95: large swings both ways, not distinguishable from no effect |
 | Predicting the judge from recorded activations and latent reads | At or below chance at picking the better of two reruns (0.41-0.44 over 238 pairs), although a perfect picker would gain +0.92 |
 
 ## Where it still breaks
