@@ -249,3 +249,8 @@ off, so it ran as objective-only (1.67 and 3.30, i.e. no different from the base
 fixed and the arm was run again as sweep21b.
 
 The per-dimension "overall" printed by the tally for this set is not meaningful: geometry has one case in it.
+
+| Modal ledger | GPU-h | est. cost |
+|---|---|---|
+| sweep21 (21 cases x 3, 7 GPUs) and sweep21b (planner arm again, 5 GPUs) | 8 | $36 |
+| sweep22: shadow world vs first-frame pin vs base, 11 turn-and-return cases (6 GPUs) | 4.5 | $20 |
