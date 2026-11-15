@@ -68,16 +68,22 @@ def run_job(stepper, model, job, data, log=print, after_each=None):
                 if job.get("player"):
                     import player
                     pl = player.Player()
-                ep = episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
-                                     log=lambda *x: None, timeline=tl, player=pl,
-                                     cfg=vcfg)
-                res = ep.run(case, img, seed=job.get("seed", 0))
+                def make(c):
+                    return episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
+                                           log=lambda *x: None, timeline=tl, player=pl, cfg=c)
+                frames = None
+                if (vcfg or {}).get("repair"):
+                    import repair
+                    res, frames = repair.run(make, stepper, case, img, job.get("seed", 0), vcfg, log=log)
+                else:
+                    res = make(vcfg).run(case, img, seed=job.get("seed", 0))
             except Exception as e:  # one bad case must not sink the shard
                 import traceback
                 log(f"{task_id} {mode} FAILED {e!r}")
                 open(os.path.join(d, "error.txt"), "w").write(traceback.format_exc())
                 continue
-            imageio.mimsave(os.path.join(d, "video.mp4"), stepper.video(), fps=FPS, quality=8)
+            imageio.mimsave(os.path.join(d, "video.mp4"), frames if frames is not None else stepper.video(),
+                            fps=FPS, quality=8)
             res.update(directed=tl is not None, model=model, wall_seconds=round(time.time() - t0, 1),
                        prompt=case["prompt"], action=case["action"],
                        peak_vram_gb=round(torch.cuda.max_memory_allocated() / 2**30, 1))
