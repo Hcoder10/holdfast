@@ -67,6 +67,23 @@ together, two judging passes averaged per case** (`results/held_out.json`):
 - The two judging passes of the same videos differ by 0.48 points per video on average; per pass the
   final arm's overall is 2.38 and 2.24, the unmodified model's 2.11 and 2.09.
 
+**A second arm, designed after the held-out result was known** (`results/held_out_v2.json`). On first-person
+cases it drops the caption gate and return register and adds the shadow world: when the camera turns away, the
+generation state is forked and keeps running the view that was left; on return the arriving frame is pinned to
+the fork's current frame through the model's image-condition input. Third-person and wait-and-observe cases run
+the same program as before, so their videos and scores are reused; the 46 first-person cases were regenerated
+and judged twice.
+
+| Held-out half (95 cases) | Geometry | Interaction | Insight | Out-of-sight | Overall |
+|---|---|---|---|---|---|
+| Final state program (pre-registered) | 2.48 | 2.24 | 2.47 | 2.06 | 2.31 |
+| With the shadow world (post hoc) | 2.82 | 2.26 | 2.47 | 2.04 | **2.40** |
+
+Against the unmodified model: +0.30, 95% interval +0.02 to +0.60. Against the pre-registered program: +0.09
+(-0.11 to +0.28), all of it geometry (+0.34), which moves past Genie 3's 2.74. Because this arm was chosen after
+looking at held-out failures, 2.31 remains the figure we stand behind; 2.40 is what the same data says about the
+revision. Its test on 11 development cases, before it was run here, gave +0.26 per case.
+
 Development half (single judging, for reference): unmodified model 2.12 on 76 cases; objective in the
 prompt 2.62 against 2.33 on 24 of them. That +0.3 shrank to +0.14 on the held-out half, which is what
 selecting on a small noisy sample does.

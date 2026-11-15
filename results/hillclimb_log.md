@@ -290,3 +290,11 @@ back the change is +0.04. Out-of-sight scores stay near 1.4-1.5 in all arms: the
 | Modal ledger | GPU-h | est. cost |
 |---|---|---|
 | final2: shadow world on the 46 first-person held-out cases (6 GPUs) | 5.5 | $25 |
+
+### Held-out, shadow-world arm (08:55, post hoc)
+
+46 first-person held-out cases regenerated with the shadow world (no caption gate or return register), two Gemini
+passes; the other 49 cases reuse the pre-registered run. Overall 2.40 (GC 2.82, IF 2.26, IE 2.47, OE 2.04).
+Against unmodified +0.30 (95% interval +0.02 to +0.60); against the pre-registered program +0.09 (-0.11 to +0.28),
+geometry +0.34, out-of-sight -0.02. On the 46 regenerated cases: 2.45 vs 2.26 (pre-registered), 2.38 (objective
+only), 2.15 (unmodified). Gate, geometry: 16 pass / 7 partial / 1 fail; out-of-sight: 14 / 1 / 6.

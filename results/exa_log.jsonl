@@ -26,3 +26,4 @@
 {"op": "contents", "query": "claim check", "urls": ["https://github.com/kxding/PlayWorld"], "cost": 0.001, "by": "scout", "time": "2026-11-15T07:04:37"}
 {"op": "contents", "query": "claim check", "urls": ["https://kxding.github.io/project/PlayWorld/"], "cost": 0.001, "by": "scout", "time": "2026-11-15T07:04:37"}
 {"op": "contents", "query": "claim check", "urls": ["https://rikiyat.github.io/blog/weight-space-programming/"], "cost": 0.001, "by": "scout", "time": "2026-11-15T07:04:37"}
+{"op": "contents", "query": "read scout proposal source", "urls": ["https://www.alphaxiv.org/abs/2607.27110"], "by": "scout", "time": "2026-11-15T08:40:00"}
