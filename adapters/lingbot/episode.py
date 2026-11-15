@@ -196,7 +196,11 @@ class Episode:
         via "sink": a stored view at the heading about to be faced is written back into
         the second half of the attention sink (measured to have no visible effect)."""
         b = getattr(self, "bank", None)
-        if b is None or self.s.chunk_id < 3:
+        if b is None:
+            return
+        if b.get("shadow_on"):
+            return self._shadow_world(b, yaw, pitch, move)
+        if self.s.chunk_id < 3:
             return
         ty = (self.ayaw + yaw + 180.0) % 360.0 - 180.0
         tp = self.apitch + pitch
@@ -229,6 +233,51 @@ class Episode:
                                "offset_deg": round(best[0], 1), "target_yaw": round(ty, 1)})
         if b.get("gain") and not getattr(self, "ret", None):
             self.s.tune["sink_gain"] = b["gain"] if best is not None else 1.0
+
+    def _shadow_world(self, b, yaw, pitch, move):
+        """The unseen view keeps running in a second copy of the model's hidden state.
+
+        When the camera starts to turn away from where it is standing, the whole generation
+        state (attention cache, latents, noise stream) is forked. For every chunk the main
+        rollout then makes, the fork makes one too with the camera held still on the view that
+        was left, so whatever was happening there carries on by the model's own dynamics and
+        static things stay as they were. When the camera turns back to within `tol` degrees,
+        the arriving chunk's last frame is pinned, through the model's image-condition channel,
+        to the fork's frame for that same moment: the camera comes back to the scene as it is
+        now. Nothing is pasted in sampling and no text is involved. If the camera walks away
+        from the standing point the fork is dropped; the next turn makes a new one."""
+        s = self.s
+        tpos = self._moved(move)
+        if b["shadow"] is None:
+            if not (yaw or pitch) or s.chunk_id < 1:
+                return
+            b["shadow"] = s.fork()
+            b["home"] = (self.ayaw, self.apitch, tuple(self.pos))
+            b["armed"], b["shadow_n"] = False, 0
+            b["forks"] += 1
+        hy, hp, hpos = b["home"]
+        off = max(abs((self.ayaw + yaw - hy + 180.0) % 360.0 - 180.0), abs(self.apitch + pitch - hp))
+        dist = float(np.hypot(tpos[0] - hpos[0], tpos[1] - hpos[1]))
+        if dist > b["pos_tol"] or b["shadow_n"] >= b["max_shadow"]:
+            b["shadow"] = None
+            b["dropped"] += 1
+            return
+        main = s.export()
+        s.load(b["shadow"])
+        try:
+            s.step([rel_pose()] * CHUNK, decode=False)        # one more chunk of the unseen view
+            b["shadow"] = s.export()
+        finally:
+            s.load(main)
+        b["shadow_n"] += 1
+        b["shadow_total"] += 1
+        if off > b["tol"] + 5.0:
+            b["armed"] = True
+        if b["armed"] and off <= b["tol"] and (yaw or pitch):
+            self._key = (b["shadow"]["latents"][-1][:, CHUNK - 1].clone(), CHUNK - 1)
+            b["reads"].append({"at_chunk": s.chunk_id, "via": "shadow key", "offset_deg": round(off, 1),
+                               "unseen_chunks": b["shadow_n"]})
+            b["shadow"] = None
 
     def _moved(self, move):
         """Position after `move`, in steps, in the starting view's frame (x right, z forward)."""
@@ -801,7 +850,9 @@ class Episode:
             self.bank = {"views": [], "tol": float(bc.get("tol", 12.0)), "min_age": int(bc.get("min_age", 5)),
                          "gain": bc.get("gain"), "loaded": 1, "reads": [], "superseded": 0,
                          "via": bc.get("via", "sink"), "armed": False,
-                         "pos_tol": float(bc.get("pos_tol", 0.6)), "first": s.cond_lat[:, 0].clone()}
+                         "pos_tol": float(bc.get("pos_tol", 0.6)), "first": s.cond_lat[:, 0].clone(),
+                         "shadow_on": bool(bc.get("shadow")), "shadow": None, "home": None, "shadow_n": 0,
+                         "max_shadow": int(bc.get("max_shadow", 28)), "forks": 0, "dropped": 0, "shadow_total": 0}
         self.ret = None
         rc = self.cfg.get("ret")
         if rc and not self.register and not (case.get("prompt") or "").lower().startswith("wait and observe"):
@@ -902,7 +953,8 @@ class Episode:
                 "plan": None if not self.plan else {k: self.plan[k] for k in ("decision", "why", "recalled")},
                 "bank": None if not getattr(self, "bank", None) else {
                     "views": len(self.bank["views"]), "superseded": self.bank["superseded"],
-                    "reads": self.bank["reads"]},
+                    "reads": self.bank["reads"], "forks": self.bank["forks"], "dropped": self.bank["dropped"],
+                    "unseen_chunks_run": self.bank["shadow_total"]},
                 "ret": None if not getattr(self, "ret", None) else {
                     "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
                     "sink": self.ret["sink"], "bias_hits": __import__("sdpa_shim").BIAS_HITS, "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
