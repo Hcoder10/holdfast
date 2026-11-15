@@ -27,11 +27,31 @@ Published reference (PlayWorld paper, Table 2):
 Ours:
 
 <!-- RESULTS-TABLE -->
-| Configuration | Cases | Geometry | Interaction | Insight | Out-of-sight | Overall |
-|---|---|---|---|---|---|---|
-| Unmodified model, our driver | 76 (development half) | 2.16 | 1.98 | 2.85 | 1.51 | 2.12 |
-| Objective in the prompt | 24 (of the development half) | 2.67 | 3.63 | 2.65 | 1.54 | 2.62 (baseline on the same 24: 2.33) |
-| Final state program | 95 (the half never used for development) | pending | pending | pending | pending | pending |
+**Held-out half: 95 cases never used for development, all three arms on the same cases, blinded
+together, two judging passes averaged per case** (`results/held_out.json`):
+
+| Arm | Geometry | Interaction | Insight | Out-of-sight | Overall |
+|---|---|---|---|---|---|
+| Unmodified model, our driver | 2.40 | 1.89 | 2.19 | 1.92 | 2.10 |
+| Objective in the prompt only | 2.66 | 2.04 | 2.11 | 2.13 | 2.24 |
+| **Final state program** | 2.48 | 2.24 | 2.47 | 2.06 | **2.31** |
+
+- Final minus unmodified, paired over the 95 cases: **+0.21**, 95% bootstrap interval -0.04 to +0.47
+  (36 cases better by more than 0.25, 23 worse). By dimension: geometry +0.08, interaction +0.35,
+  insight +0.28, out-of-sight +0.14.
+- Final minus objective-only: +0.08 (-0.14 to +0.30). Most of the gain over the unmodified model is
+  already there with the objective in the prompt; the registers, gate and re-anchoring add interaction
+  and insight and give back some geometry.
+- Against Genie 3's published 2.12 (171 cases): 2.31 on this half. Ahead on insight (2.47 vs 1.51) and
+  out-of-sight (2.06 vs 1.81), behind on geometry (2.48 vs 2.74) and interaction (2.24 vs 2.40).
+- Trajectory gate, out-of-sight cases (first pass): unmodified 8 pass / 7 partial / 6 fail; final
+  12 / 5 / 4. Geometry cases: unmodified 16 / 7 / 1; final 13 / 7 / 4.
+- The two judging passes of the same videos differ by 0.48 points per video on average; per pass the
+  final arm's overall is 2.38 and 2.24, the unmodified model's 2.11 and 2.09.
+
+Development half (single judging, for reference): unmodified model 2.12 on 76 cases; objective in the
+prompt 2.62 against 2.33 on 24 of them. That +0.3 shrank to +0.14 on the held-out half, which is what
+selecting on a small noisy sample does.
 <!-- /RESULTS-TABLE -->
 
 How to read these: the benchmark has 171 cases. We drew a stratified half (76 cases, seed 20261114)

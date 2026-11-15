@@ -211,3 +211,16 @@ were restored from the originals, the 190 scores and 90 gate checks made with th
 |---|---|---|
 | base95: unmodified model on the 95 held-out cases (5 GPUs) | 6 | $27 |
 | final1dev: final configuration on the 76 development-half cases, for a full-benchmark figure (5 GPUs) | 5.5 | $25 |
+
+### Held-out result (05:05): 95 cases, three arms, two passes, corrected prompts
+
+| arm | GC | IF | IE | OE | overall |
+|---|---|---|---|---|---|
+| unmodified | 2.40 | 1.89 | 2.19 | 1.92 | 2.10 |
+| objective in the prompt only | 2.66 | 2.04 | 2.11 | 2.13 | 2.24 |
+| final state program | 2.48 | 2.24 | 2.47 | 2.06 | 2.31 |
+
+Final minus unmodified +0.21 (95% interval -0.04 to +0.47). Judge cost for the held-out set: $125 on the direct key.
+What the orchestrator's frame-reading got wrong: it expected interaction near 3.0 or more (2.24), and expected the
+caption gate to lift out-of-sight above the objective-only arm (2.06 vs 2.13). What it got right: the gate passes
+more out-of-sight trajectory checks (12 vs 8), and re-anchoring helps the 30 s insight cases (+0.28).
