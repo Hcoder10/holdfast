@@ -84,6 +84,29 @@ def push(repo: str, token: str, meta: list, private: bool, baseline: bool):
     api = HfApi(token=token)
     api.create_repo(repo, repo_type="dataset", private=private, exist_ok=True)
     stage = "/tmp/stage"
+    failed = []
+
+    def copy(src, dst):
+        """Plain read and write, retried: a volume read can fail once and succeed after a reload."""
+        for k in range(3):
+            try:
+                with open(src, "rb") as a, open(dst, "wb") as b:
+                    while True:
+                        buf = a.read(1 << 20)
+                        if not buf:
+                            break
+                        b.write(buf)
+                return True
+            except OSError as e:
+                err = repr(e)
+                try:
+                    runs.reload()
+                except Exception:
+                    pass
+        failed.append((src, err))
+        if os.path.exists(dst):
+            os.remove(dst)
+        return False
     arms = ["holdfast"] + (["unmodified"] if baseline else [])
     n = {a: 0 for a in arms}
     for row in meta:
@@ -92,10 +115,11 @@ def push(repo: str, token: str, meta: list, private: bool, baseline: bool):
             if not os.path.exists(f"{src}/video.mp4"):
                 continue
             os.makedirs(f"{stage}/videos/{arm}", exist_ok=True)
-            shutil.copyfile(f"{src}/video.mp4", f"{stage}/videos/{arm}/{row['task_id']}.mp4")
+            if not copy(f"{src}/video.mp4", f"{stage}/videos/{arm}/{row['task_id']}.mp4"):
+                continue
             if arm == "holdfast" and os.path.exists(f"{src}/result.json"):
                 os.makedirs(f"{stage}/logs/{arm}", exist_ok=True)
-                shutil.copyfile(f"{src}/result.json", f"{stage}/logs/{arm}/{row['task_id']}.json")
+                copy(f"{src}/result.json", f"{stage}/logs/{arm}/{row['task_id']}.json")
             n[arm] += 1
     with open(f"{stage}/metadata.jsonl", "w", encoding="utf8") as f:
         for row in meta:
@@ -104,9 +128,16 @@ def push(repo: str, token: str, meta: list, private: bool, baseline: bool):
     base = ("- `videos/unmodified/<task_id>.mp4`: the untouched model on the same cases, same seed.\n" if baseline else "")
     open(f"{stage}/README.md", "w", encoding="utf8").write(CARD.replace("{BASELINE}", base))
     size = sum(os.path.getsize(os.path.join(d, x)) for d, _, fs in os.walk(stage) for x in fs)
-    print("staged", n, f"{size / 1e9:.2f} GB", flush=True)
-    api.upload_large_folder(repo_id=repo, repo_type="dataset", folder_path=stage)
-    return {"videos": n, "gb": round(size / 1e9, 2), "url": f"https://huggingface.co/datasets/{repo}"}
+    print("staged", n, f"{size / 1e9:.2f} GB", "failed:", failed, flush=True)
+    if hasattr(api, "upload_large_folder"):
+        api.upload_large_folder(repo_id=repo, repo_type="dataset", folder_path=stage)
+    else:
+        for sub in ("README.md", "metadata.jsonl"):
+            api.upload_file(path_or_fileobj=f"{stage}/{sub}", path_in_repo=sub, repo_id=repo, repo_type="dataset")
+        for sub in ("logs", "videos"):
+            api.upload_folder(repo_id=repo, repo_type="dataset", folder_path=f"{stage}/{sub}", path_in_repo=sub,
+                              commit_message=f"Add {sub}")
+    return {"videos": n, "gb": round(size / 1e9, 2), "failed": failed, "url": f"https://huggingface.co/datasets/{repo}"}
 
 
 @app.local_entrypoint()
