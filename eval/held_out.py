@@ -30,10 +30,16 @@ RUNS = ROOT / "runs"
 # cases: the unmodified model's judge inputs from the earlier half-benchmark run, and the final program).
 SET = os.environ.get("WH_SET", "held")
 ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
-        "dev": {"baseline": "half1", "final": "final1dev"}}[SET]
+        "dev": {"baseline": "half1", "final": "final1dev"},
+        # 21 development-half cases (15 the judge called frozen, 6 that scored well): the cohesive base,
+        # the alive write always on, and the launch-time planner choosing the program
+        "sw21": {"baseline": "sweep21:lingbot2_14b_open_base", "alive": "sweep21:lingbot2_14b_open_alive03",
+                 "final": "sweep21:lingbot2_14b_open_planner"},
+        # the planner-chosen program on the 95 held-out cases, against the arms already judged there
+        "v2": {"baseline": "base95", "final": "final2"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 
@@ -45,18 +51,21 @@ def sh(cmd, timeout=3600):
 
 
 def fetch(arm):
-    run = ARMS[arm]
+    run, _, mode = ARMS[arm].partition(":")
+    mode = mode or MODE
     tmp = RUNS / f"jin_tmp_{run}"
     if run == "half1":                      # already exported and downloaded on Saturday
         tmp = RUNS / "jin_half1"
     else:
-        print(sh(["modal", "run", "modal_app/wh_modal.py::judge_inputs", "--run", run], 3000)[-300:])
-        tmp.mkdir(exist_ok=True)
-        sh(["modal", "volume", "get", "worldhold-runs", f"judge/{run}/{MODE}", str(tmp) + "/", "--force"], 3000)
+        if not (tmp / ".exported").exists():
+            print(sh(["modal", "run", "modal_app/wh_modal.py::judge_inputs", "--run", run], 3000)[-300:])
+            tmp.mkdir(exist_ok=True)
+            (tmp / ".exported").write_text("1")
+        sh(["modal", "volume", "get", "worldhold-runs", f"judge/{run}/{mode}", str(tmp) + "/", "--force"], 3000)
     dst = INP / arm
     dst.mkdir(parents=True, exist_ok=True)
     n = 0
-    for case in sorted((tmp / MODE).iterdir()):
+    for case in sorted((tmp / mode).iterdir()):
         if (case / "score_prompt.txt").exists() and not (dst / case.name).exists():
             shutil.copytree(case, dst / case.name)
             n += 1
@@ -117,6 +126,8 @@ def tally():
                     n_by_dim={d: len(v) for d, v in by.items()})
 
     out = {"passes": len(passes), "arms": {a: table(mean[a]) for a in ARMS}}
+    if "alive" in ARMS:
+        out.setdefault("paired_extra", {})
     # gate outcomes (first pass) for the two motion dimensions
     for a in ARMS:
         out["arms"][a]["gate"] = {d: {k: sum(1 for c, g in gates[a].items() if dim(c) == d and g and g[0] == k)
@@ -140,13 +151,20 @@ def tally():
                 "losses": sum(mean[b][c] < mean[a][c] - 0.25 for c in common)}
 
     out["paired"] = {"final_minus_baseline": paired("baseline", "final")}
+    if "alive" in ARMS:
+        out["paired"]["alive_minus_baseline"] = paired("baseline", "alive")
     if "objective" in ARMS:
         out["paired"].update({"objective_minus_baseline": paired("baseline", "objective"),
                               "final_minus_objective": paired("objective", "final")})
     out["per_case"] = {a: {c: [round(x, 2) for x in v] for c, v in sorted(per[a].items())} for a in ARMS}
     (ROOT / "results" / f"{OUTNAME}.json").write_text(json.dumps(out, indent=1))
     lines = ["| Arm | Cases | Geometry | Interaction | Insight | Out-of-sight | Overall |", "|---|---|---|---|---|---|---|"]
-    names = {"baseline": "Unmodified model", "objective": "Objective in the prompt only", "final": "Final state program"}
+    names = {"baseline": "Unmodified model", "objective": "Objective in the prompt only", "final": "Final state program",
+             "alive": "Alive write always on"}
+    if SET == "sw21":
+        names.update(baseline="Cohesive base", final="Planner-chosen program")
+    if SET == "v2":
+        names.update(final="Planner-chosen program")
     for a in ARMS:
         t = out["arms"][a]
         lines.append(f"| {names[a]} | {t['n']} | " + " | ".join(
