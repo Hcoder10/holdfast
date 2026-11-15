@@ -1,0 +1,46 @@
+{
+ "cases": 171,
+ "note": "held-out half: two judging passes averaged per case; development half: one pass",
+ "arms": {
+  "baseline": {
+   "GC": 2.348,
+   "IF": 2.053,
+   "IE": 2.297,
+   "OE": 1.683,
+   "overall": 2.095
+  },
+  "final": {
+   "GC": 2.448,
+   "IF": 2.298,
+   "IE": 2.57,
+   "OE": 1.936,
+   "overall": 2.313
+  }
+ },
+ "final_minus_baseline": {
+  "overall": 0.218,
+  "ci95": [
+   0.029,
+   0.401
+  ],
+  "by_dim": {
+   "GC": 0.1,
+   "IF": 0.246,
+   "IE": 0.273,
+   "OE": 0.253
+  },
+  "wins": 62,
+  "losses": 40
+ },
+ "final_overall_ci95": [
+  2.138,
+  2.497
+ ],
+ "genie3_published": {
+  "GC": 2.74,
+  "IF": 2.4,
+  "IE": 1.51,
+  "OE": 1.81,
+  "overall": 2.12
+ }
+}

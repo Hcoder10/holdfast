@@ -27,6 +27,24 @@ Published reference (PlayWorld paper, Table 2):
 Ours:
 
 <!-- RESULTS-TABLE -->
+**Full benchmark, 171 cases** (`results/full_benchmark.json`): both arms on every case, blinded
+together within each half.
+
+| | Geometry | Interaction | Insight | Out-of-sight | Overall |
+|---|---|---|---|---|---|
+| Unmodified model, our driver | 2.35 | 2.05 | 2.30 | 1.68 | 2.10 |
+| **Final state program** | 2.45 | 2.30 | 2.57 | 1.94 | **2.31** |
+| Genie 3 (published) | 2.74 | 2.40 | 1.51 | 1.81 | 2.12 |
+
+- Final minus unmodified, paired over 171 cases: **+0.22**, 95% bootstrap interval +0.03 to +0.40
+  (62 cases better by more than 0.25, 40 worse). Every dimension moves up: geometry +0.10,
+  interaction +0.25, insight +0.27, out-of-sight +0.25.
+- The final program's overall has a 95% interval of 2.14 to 2.50. Genie 3's published 2.12 sits just
+  below it. We are ahead on insight and out-of-sight and behind on geometry and interaction.
+- The held-out half was judged twice and averaged; the development half once. The development half
+  is where the configuration was chosen, so the held-out table below is the clean one; the two halves
+  agree (2.34 and 2.31 for the final program, 2.15 and 2.10 for the unmodified model).
+
 **Held-out half: 95 cases never used for development, all three arms on the same cases, blinded
 together, two judging passes averaged per case** (`results/held_out.json`):
 

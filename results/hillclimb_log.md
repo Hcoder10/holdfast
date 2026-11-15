@@ -224,3 +224,9 @@ Final minus unmodified +0.21 (95% interval -0.04 to +0.47). Judge cost for the h
 What the orchestrator's frame-reading got wrong: it expected interaction near 3.0 or more (2.24), and expected the
 caption gate to lift out-of-sight above the objective-only arm (2.06 vs 2.13). What it got right: the gate passes
 more out-of-sight trajectory checks (12 vs 8), and re-anchoring helps the 30 s insight cases (+0.28).
+
+### Full benchmark (06:05): final program and unmodified model on all 171 cases
+
+Development half (76 cases, one Gemini pass, both arms blinded together): unmodified 2.15 (GC 2.30, IF 2.43, IE 2.40,
+OE 1.46), final 2.34 (2.42, 2.44, 2.67, 1.82); paired +0.19 (-0.10 to +0.48). Combined with the held-out half:
+unmodified 2.10, final 2.31, paired +0.22 (95% interval +0.03 to +0.40) over 171 cases. `results/full_benchmark.json`.
