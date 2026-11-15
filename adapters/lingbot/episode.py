@@ -191,18 +191,33 @@ class Episode:
         tp = self.pitch + pitch
         best = None
         for e in b["views"]:
-            if e["pos"] != tuple(self.pos) or e["chunk"] > self.s.chunk_id - b["min_age"] or e["chunk"] < 1:
+            if e["pos"] != tuple(self.pos) or e["chunk"] > self.s.chunk_id - b["min_age"] or                     (e["chunk"] < 1 and b["via"] != "key") or (e["chunk"] >= 0 and b["via"] == "key"):
+                # "key": only the exact first frame is a target, so one return gives one arrival
                 continue
             d = max(abs((e["yaw"] - ty + 180.0) % 360.0 - 180.0), abs(e["pitch"] - tp))
             if d <= b["tol"] and (best is None or d < best[0]):
                 best = (d, e)
-        if best is not None and b["loaded"] != best[1]["chunk"]:
+        if best is None:
+            b["armed"] = True          # the camera has left every stored view: a later match is a return
+        if best is not None and b["via"] == "key":
+            # arrive on the stored view: pin this chunk's last frame to it through the
+            # image-condition channel, once per return
+            if b["armed"] and (yaw or pitch):
+                self._key = (best[1]["lat"][:, 0 if best[1]["chunk"] < 0 else CHUNK - 1], CHUNK - 1)
+                b["armed"] = False
+                b["reads"].append({"at_chunk": self.s.chunk_id, "from_chunk": best[1]["chunk"], "via": "key",
+                                   "offset_deg": round(best[0], 1), "target_yaw": round(ty, 1)})
+        elif best is not None and b["loaded"] != best[1]["chunk"]:
             self.s.write_sink(best[1]["lat"], slot=1)
             b["loaded"] = best[1]["chunk"]
             b["reads"].append({"at_chunk": self.s.chunk_id, "from_chunk": best[1]["chunk"],
                                "offset_deg": round(best[0], 1), "target_yaw": round(ty, 1)})
         if b.get("gain") and not getattr(self, "ret", None):
             self.s.tune["sink_gain"] = b["gain"] if best is not None else 1.0
+
+    def _take_key(self):
+        k, self._key = getattr(self, "_key", None), None
+        return k
 
     def _bank_write(self, move):
         b = getattr(self, "bank", None)
@@ -319,7 +334,8 @@ class Episode:
                                 for j in range(CHUNK)])]
         def generate():
             return self.s.step(rel, prompt=prompt, guide=guide, guide_from=self.guide_from,
-                               guide_hard=self.guide_hard, region=region, guide_via=self.guide_via)
+                               guide_hard=self.guide_hard, region=region, guide_via=self.guide_via,
+                               key=self._take_key())
         new = self._watched(generate, label, moving=bool(yaw or pitch or move))
         prev = self.frames[-1] if self.frames else new[0]
         my, mp, n = relative_rotation(prev, new[-1], self.K)
@@ -729,7 +745,12 @@ class Episode:
         if self.cfg.get("bank"):
             bc = self.cfg["bank"]
             self.bank = {"views": [], "tol": float(bc.get("tol", 12.0)), "min_age": int(bc.get("min_age", 5)),
-                         "gain": bc.get("gain"), "loaded": 1, "reads": [], "superseded": 0}
+                         "gain": bc.get("gain"), "loaded": 1, "reads": [], "superseded": 0,
+                         "via": bc.get("via", "sink"), "armed": False}
+            if self.bank["via"] == "key":
+                # the exact first frame, at the start heading and position
+                self.bank["views"].append({"chunk": -1, "yaw": 0.0, "pitch": 0.0, "pos": (0, 0),
+                                           "lat": s.cond_lat[:, :1].repeat(1, CHUNK, 1, 1).clone()})
         self.ret = None
         rc = self.cfg.get("ret")
         if rc and not self.register and not (case.get("prompt") or "").lower().startswith("wait and observe"):

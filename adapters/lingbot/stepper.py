@@ -420,7 +420,7 @@ class LingBotStepper:
     # ------------------------------------------------------------------ step
     @torch.no_grad()
     def step(self, rel, prompt=None, decode=True, guide=None, guide_from=1, guide_hard=True,
-             region=None, guide_via="latent"):
+             region=None, guide_via="latent", key=None):
         """Generate one chunk.
 
         rel: three 4x4 frame-to-frame relative camera poses (see `rel_pose`).
@@ -465,6 +465,15 @@ class LingBotStepper:
         }
         latent = torch.randn(16, CHUNK, self.lat_h, self.lat_w, dtype=torch.float32,
                              generator=self.gen, device=self.device)
+        if key is not None and self.chunk_id > 0:
+            # Keyframe through the image-condition channel, the input the model was trained to
+            # treat as "this frame is given". key = (latent [16,h,w], index of the frame in this
+            # chunk). Only that frame is pinned; the others are free to travel to it.
+            y = kwargs["y"][0].clone()
+            y[:4, key[1]] = 1.0
+            y[4:, key[1]] = key[0].to(device=y.device, dtype=y.dtype)
+            kwargs["y"] = [y]
+            self.cond_writes = getattr(self, "cond_writes", 0) + 1
         rho = float(self.tune.get("noise_rho", 0.0) or 0.0)
         if rho and self.last_noise is not None:
             latent = rho * self.last_noise + (1 - rho * rho) ** 0.5 * latent
