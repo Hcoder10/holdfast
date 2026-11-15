@@ -1,4 +1,4 @@
-# worldhold
+# worldhold: Holdfast, state programs for a world model
 
 Hackathon Track 4 (World Models, Applied Reality), 14-15 November 2026.
 
@@ -9,8 +9,18 @@ Hackathon Track 4 (World Models, Applied Reality), 14-15 November 2026.
 controller that reads the model's state every 0.75 s and writes small corrections back into its
 forward pass. No weights are changed and nothing is trained.
 
-We call the set of writes a **state program**. Each write is small, sits beside something the model
-already does, and can be switched off; with none of them the system is the unmodified model.
+The method is called **Holdfast**. The set of writes it makes is a **state program**. Each write is small,
+sits beside something the model already does, and can be switched off; with none of them the system is the
+unmodified model. The writes that earned their place act at three levels of the model's state:
+
+| Level of state | Write | Failure it fixes | Judged effect |
+|---|---|---|---|
+| Attention to text | Objective register | The model under-follows the request | Interaction 2.05 to 2.30 (171 cases) |
+| Latents carried forward | Re-anchoring | The picture drifts over a long rollout | Insight 2.30 to 2.57 (30 cases) |
+| Conditioning input | Shadow world, written back on return | The scene is not the same when the camera looks back | Geometry 2.48 to 2.82 (95 held-out cases, post hoc arm) |
+
+Overall on the full 171-case benchmark: **2.31**, against 2.10 for the unmodified model and 2.12 published for
+Genie 3. With the third write, on the held-out half: 2.40.
 
 ## Results
 
@@ -99,6 +109,26 @@ byte-identical to the baseline's, and the judge scored it again. Same video, sam
 `results/hillclimb_log.md`). A dimension mean over six cases cannot resolve a difference under about
 a point. We therefore treat an unchanged video as a zero difference, pool repeat judgings of the
 baseline (`loop/pool_baseline.py`), and report the held-out half rather than the development cases.
+
+## Holdfast in three drawings
+
+![Whiteboard drawing: image tokens attend to a caption box and a request box; the arrows to the request are thick and labelled x8](docs/explainers/register.gif)
+
+**Write 1, attention to the request.** The request gets its own segment in cross-attention and eight times the
+attention, in all 40 blocks. The caption stays the base prompt. Third-person cases only.
+
+![Whiteboard drawing: a timeline of chunks drifting from red to blue, then the same timeline with each chunk pulled back toward the first](docs/explainers/reanchor.gif)
+
+**Write 2, the latents it carries forward.** After each 0.75 s chunk the mean of its latents is pulled halfway
+back toward the first chunk's, before the chunk becomes context for the next.
+
+![Whiteboard drawing: a camera turns away from a scene and back while a copy of the state keeps running the view that was left; the arriving frame is pinned to the copy's current frame](docs/explainers/shadow.gif)
+
+**Write 3, what it sees when it looks back.** When the camera starts to turn away, the whole generation state is
+copied. The copy keeps generating the view that was left. When the camera turns back, the arriving frame is
+pinned to the copy's current frame through the model's own "this frame is given" input.
+
+Rebuild the drawings with `python -I scripts/make_explainers.py`.
 
 ## Why the model breaks (from its code and the judge's words)
 
