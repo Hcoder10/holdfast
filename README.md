@@ -167,7 +167,7 @@ Every write records how many times it was actually applied, so a silent no-op sh
 
 ### Agents
 
-Seven identities read and write through one module, `tools/mem.py`. Every write carries its author as
+Nine identities read and write through one module, `tools/mem.py`. Every write carries its author as
 `identity` and one audience; every recall sends the reader's identity. Each call is appended to
 `results/memory_log.jsonl`.
 
@@ -178,7 +178,9 @@ Seven identities read and write through one module, `tools/mem.py`. Every write 
 | `director` | Step 0 | The sentence for the state on return, derived from the cartographer's fact (`wh-world`) | | `wh-world` |
 | `composer` | Step 0 of a later episode | | The director's stored sentence for this scene, instead of asking Exa again | `wh-world` |
 | `critic` | After a rollout (`repair.py`) | The worst defect it saw and the program that produced it (`wh-programs`) | | `wh-programs` |
-| `proposer`, `experimenter` | The development loop (`loop/hillclimb.py`) | Each trial's hypothesis; its judged outcome and lesson (`wh-lab`) | Past lessons before proposing | `wh-lab` |
+| `planner` | At launch (`planner.py`) | Its chosen program and reason (`wh-programs`) | Beliefs, measurements and rules about each control, written by the proposer, experimenter and critic | `wh-programs` |
+| `proposer`, `experimenter` | The development loop (`loop/hillclimb.py`) | Each trial's hypothesis and judged outcome (`wh-lab`); conclusions published as belief, measured or rule (`wh-programs`) | Past lessons before proposing | `wh-lab` |
+| `scout` | The self-improvement loop (`loop/scout.py`) | Sourced, untested proposals from Exa (`wh-lab`) | | `wh-lab` |
 
 Reads across agents: the composer uses the director's sentence; the controller uses the critic's defects
 and its own earlier programs; the proposer uses the experimenter's lessons.
@@ -219,6 +221,14 @@ that worked.
   `supersededAt: 2026-11-15T09:10:00Z`, the critic's defect about gain 16, and for each the source id
   and the excerpt it rests on; the composer (`wh-world` only) and the proposer (`wh-lab` only) get
   none of those sources.
+- **A refuted belief changed another agent's decisions** (`tools/planner_memory_demo.py`, output in
+  `results/pastdev_planner_demo.txt`). The proposer published a belief at 05:10 that the residual "alive" write
+  fixes frozen scenes. A planner that trusted it switched the write on everywhere and scored 1.59 against 2.19.
+  The experimenter published the two judged measurements and a rule ("alive must be 0 until a judged test shows a
+  gain"). The planner now builds its menu from memory, where each note carries its author, kind (belief,
+  measured, rule) and date. Reading the memory as it stood at 05:30 (past.dev's `queryTimestamp`) it turns the
+  write on for 8 of 8 cases; reading it now, for 0 of 8, and in both it obeys the critic's earlier rule on the
+  action register. Agents outside the `wh-programs` audience see none of these records.
 - **The repair loop reads a winning program back** as the first attempt for a similar scene.
 
 ### Caveats
@@ -237,12 +247,45 @@ that worked.
 - The agents are roles within one program run, sharing one API key; identity is declared by the
   caller, not authenticated per agent.
 
-## Exa
+## Exa challenge
 
-Exa is called inside the episode's step 0, in `adapters/lingbot/outsight.py` (and `brief.py`), via
-`tools/exa_search.py`; every call is logged to `results/exa_log.jsonl` with its query and sources. The
-answer is not shown to the model as text in the prompt: it becomes one sentence in a cross-attention
-register that is silent until the camera returns.
+Exa is called in three places. Every call is logged with its query and the URLs it returned
+(`results/exa_log.jsonl` for calls made from this machine; calls made inside generation are collected from the
+run results into `results/exa_sources_final.jsonl`).
+
+**1. Inside every first-person episode (the main loop): `adapters/lingbot/outsight.py`, `exa_search.answer`.**
+At step 0 an agent names the thing in the first frame that is mid-process and asks Exa how far that process
+advances in about ten seconds. The answer becomes one sentence that enters the model as a cross-attention
+register: silent while the camera is away, ramped in as the measured heading returns. It is not pasted into the
+prompt. `results/exa_sources_final.jsonl` has, for each of the 52 episodes of the reported runs that used it, the
+question, Exa's answer, the source URL, the sentence written, and on how many chunks the register was active.
+
+**2. In the self-improvement loop: `loop/scout.py methods`, `/search` restricted to 2025 onwards.** The scout
+reads how the final program still fails (the judge's summaries on the held-out half, grouped into failure modes:
+replaced on return 21, frozen 11, hard cut 9, trajectory not executed 6, no evolution out of view 2 cases), searches for recent work on each mode,
+and has a small model map each hit onto one of the controller's write ports, or say it needs new code. A
+proposal must point at a URL Exa returned. This run produced 15 proposals from sources dated 2025-06-03 to
+2026-10-16, all later than anything the orchestrating model could know from training: `results/scout_report.md`.
+Several describe, from the literature, interventions this project had already built and judged (camera-motion
+guidance, a deeper attention sink, a shadow rollout of the off-screen region, memory retrieval for revisits), and
+the report says for each port what we measured. Proposals are stored in past.dev as untested hypotheses; only a
+judged measurement lets the planner act on one.
+
+**3. Checking what we quote: `loop/scout.py claims`, `/contents`.** The reference numbers in this README
+(Genie 3 at 2.12 with its four dimension scores, Matrix-Game-3.0 at 1.14, 171 cases, and the weight-space
+programming result that redirected the project) are fetched from the live arXiv page, the project page and the
+blog and matched against the text: `results/scout_claims.json`. All four were found.
+
+What search does that the models could not: the benchmark (August 2026) and the weight-space programming post
+(2 November 2026) are both newer than the orchestrating model's knowledge. The post was found by web search
+during the hack and led directly to the residual-stream experiments and to the framing that an edit can remove
+an obstacle but not add an ability; the scout now reproduces that lookup through Exa with the source checked.
+
+What we cannot claim: that search raised the benchmark score. The arm with the Exa-derived return sentence did
+not beat the objective-only arm on out-of-sight (2.06 vs 2.13 on the held-out half). In three of the 52 episodes
+the scene agent named the camera itself as the thing in progress, because it was handed the caption with the
+objective appended; that is fixed in the code and was not re-run. The scout's proposals that map onto untested
+ground (frequency-domain anchoring of latents, separate anchor and local cache tracks) have not been tried.
 
 ## Modal
 
