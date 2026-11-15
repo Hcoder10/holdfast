@@ -217,7 +217,7 @@ the unmodified run when its patches made things worse. The scores are its own cr
 also changed several controls at once when asked for one, and on the strafe case repeated a patch that had not
 helped. None of this has been scored by the benchmark judge.
 
-### Landmarks: several views kept, written back on arrival (post hoc, small test)
+### Landmarks: several views kept, written back on arrival (post hoc; not an established gain)
 
 The shadow world keeps the one view the camera just turned away from. Landmarks keep every view where the camera
 stopped or changed what it was doing (the start, the end of each walk or turn, each pause) as the latent of that
@@ -226,20 +226,27 @@ pinned to it through the same image-condition input. This covers what the shadow
 walking or sliding, and returning to a place visited earlier that is not the one just left.
 
 <!-- LANDMARKS -->
-Ten development cases that return to an earlier position, shadow world alone against shadow world plus
-landmarks, both arms generated together, blinded together, judged twice (`results/sweep31_full.json`):
+Shadow world alone against shadow world plus landmarks, both arms generated together, blinded together and judged
+twice, on the cases that return to an earlier position by walking or sliding (`results/sweep31_full.json`,
+`results/sweep33.json`, `results/full_benchmark_v3.json`):
 
-| 10 cases | Geometry (7) | Out-of-sight (3) | Paired difference |
+| Cases | Shadow world | + landmarks | Paired difference (95% interval) |
 |---|---|---|---|
-| Shadow world | 1.77 | 1.00 | |
-| Shadow world + landmarks | 2.19 | 2.21 | **+0.81**, 95% interval +0.04 to +1.70 (5 better, 2 worse) |
+| 10 development cases | geometry 1.77, out-of-sight 1.00 | 2.19, 2.21 | +0.81 (+0.04 to +1.70), 5 better, 2 worse |
+| 9 held-out cases | geometry 2.27, out-of-sight 1.50 | 2.19, 1.50 | -0.04 (-0.39 to +0.24), 2 better, 1 worse |
+| All 19 | | | +0.44 (-0.06 to +1.08), 7 better, 3 worse |
+
+The development result did not replicate on the held-out cases, where the write fired on every case (checked in
+the logs) and six of nine scores did not move. On an orbit-around-an-object case it turned a pass at the
+trajectory gate into a fail: the scripted steps returned to a checkpoint's position while the picture was on the
+other side of the object. Over all 171 cases the program with landmarks scores 2.32, the same as without. The
+strafe-out-and-back case (1.0 and 1.0 to 4.0 and 4.0) and walk in, out, in again (better in all three runs it was
+part of) are real examples of what it does, not evidence of an average gain.
 
 The first test of this write (12 cases) showed nothing, and looking at why found two bugs: the trigger counted
 the agent player's top-up steps, so "back at the landmark" was never detected in 6 of 12 cases; and the start
 view was pinned as the VAE's first latent (one frame) in a slot that holds four, which decoded washed out. The
-table above is the rerun with both fixed. Ten cases, a noisy judge (the two passes differ by 0.81 per video
-here) and a design chosen after seeing failures: this is a lead, not an established gain. The strafe-out-and-back
-case went from 1.0 and 1.0 to 4.0 and 4.0, and walk in, out, in again improved in all three runs it was part of.
+tables above are after both fixes.
 <!-- /LANDMARKS -->
 
 ### Reading the state

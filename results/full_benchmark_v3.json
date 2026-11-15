@@ -1,0 +1,165 @@
+{
+ "note": "Shadow world plus landmarks on all 171 cases. Landmarks ran on the cases listed in landmark_cases; everything else keeps its score under the shadow-world program. Post hoc.",
+ "landmark_cases": {
+  "GC002": "sweep31_full",
+  "GC005": "sweep31_full",
+  "GC009": "sweep31_full",
+  "GC023": "sweep31_full",
+  "GC025": "sweep31_full",
+  "GC038": "sweep31_full",
+  "GC047": "sweep31_full",
+  "OE043": "sweep31_full",
+  "OE056": "sweep31_full",
+  "OE060": "sweep31_full",
+  "GC001": "sweep33",
+  "GC004": "sweep33",
+  "GC006": "sweep33",
+  "GC007": "sweep33",
+  "GC011": "sweep33",
+  "GC020": "sweep33",
+  "GC045": "sweep33",
+  "OE055": "sweep33",
+  "OE059": "sweep33"
+ },
+ "arms": {
+  "baseline": {
+   "GC": 2.348,
+   "IF": 2.053,
+   "IE": 2.297,
+   "OE": 1.683,
+   "overall": 2.095,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  },
+  "final": {
+   "GC": 2.448,
+   "IF": 2.298,
+   "IE": 2.57,
+   "OE": 1.936,
+   "overall": 2.313,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  },
+  "v2": {
+   "GC": 2.598,
+   "IF": 2.297,
+   "IE": 2.57,
+   "OE": 1.827,
+   "overall": 2.323,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  },
+  "v2_same_batch": {
+   "GC": 2.465,
+   "IF": 2.297,
+   "IE": 2.57,
+   "OE": 1.795,
+   "overall": 2.282,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  },
+  "v3": {
+   "GC": 2.513,
+   "IF": 2.297,
+   "IE": 2.57,
+   "OE": 1.879,
+   "overall": 2.315,
+   "n": 171,
+   "n_by_dim": {
+    "GC": 48,
+    "IF": 50,
+    "IE": 30,
+    "OE": 43
+   }
+  }
+ },
+ "v3_minus_v2_same_batch": {
+  "n": 171,
+  "by_dim": {
+   "GC": 0.048,
+   "IF": 0.0,
+   "IE": 0.0,
+   "OE": 0.084
+  },
+  "overall": 0.033,
+  "ci95": [
+   -0.017,
+   0.09
+  ],
+  "wins": 7,
+  "losses": 3
+ },
+ "v3_minus_baseline": {
+  "n": 171,
+  "by_dim": {
+   "GC": 0.165,
+   "IF": 0.244,
+   "IE": 0.273,
+   "OE": 0.196
+  },
+  "overall": 0.22,
+  "ci95": [
+   0.031,
+   0.41
+  ],
+  "wins": 64,
+  "losses": 45
+ },
+ "v3_minus_final": {
+  "n": 171,
+  "by_dim": {
+   "GC": 0.065,
+   "IF": -0.001,
+   "IE": 0.0,
+   "OE": -0.057
+  },
+  "overall": 0.001,
+  "ci95": [
+   -0.119,
+   0.119
+  ],
+  "wins": 33,
+  "losses": 26
+ },
+ "landmark_cases_only": {
+  "n": 19,
+  "by_dim": {
+   "GC": 0.164,
+   "OE": 0.725
+  },
+  "overall": 0.445,
+  "ci95": [
+   -0.061,
+   1.082
+  ],
+  "wins": 7,
+  "losses": 3
+ },
+ "genie3_published": {
+  "GC": 2.74,
+  "IF": 2.4,
+  "IE": 1.51,
+  "OE": 1.81,
+  "overall": 2.12
+ }
+}
