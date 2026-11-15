@@ -160,6 +160,7 @@ class Episode:
         self.gains = []               # reliable achieved/commanded yaw ratios this episode
         self.been_away = False        # has the starting view left the frame since we stood here
         self.shadow = None            # forked rollout still watching the starting view
+        self.seg, self.seg_dir = 0, 0  # id and direction of the sweep in progress
         self.shadow_chunks = 0
         self.caption = ""
         self.prior_gain = ASSUMED_GAIN
@@ -172,6 +173,9 @@ class Episode:
         rotation the frames actually show, as (yaw, pitch); None if unmeasurable."""
         guide, reloc = None, None
         direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
+        if direction and direction != self.seg_dir:
+            self.seg += 1
+            self.seg_dir = direction
         if move is not None:
             rel = [_translate(move, self.speed)] * CHUNK
         else:
@@ -184,9 +188,8 @@ class Episode:
                 # between what memory says we should see and what is on screen, and
                 # correct the orientation estimate. If they cannot be matched, the
                 # estimate is not trustworthy enough to paste from, so skip guidance.
-                seen, cover = self.mem.render(self.yaw, self.pitch, chunk=self.s.chunk_id,
-                                              direction=direction)
-                if cover.mean() > 0.25:
+                seen, cover = self.mem.nearest(self.yaw, self.pitch, seg=self.seg)
+                if seen is not None and cover.mean() > 0.25:
                     dy, dp, n = relative_rotation(seen, self.frames[-1], self.K)
                     if dy is not None and n >= MIN_INLIERS and abs(dy) < 40 and abs(dp) < 40:
                         self.yaw, self.pitch = self.yaw + dy, self.pitch + dp
@@ -194,10 +197,14 @@ class Episode:
                     else:
                         usable, reloc = False, ("failed", n)
                 if usable:
-                    imgs, masks = zip(*[self.mem.render(self.yaw + yaw * (i + 1) / 12,
-                                                        self.pitch + pitch * (i + 1) / 12,
-                                                        chunk=self.s.chunk_id, direction=direction)
-                                        for i in range(12)])
+                    blank = np.zeros((self.s.h, self.s.w, 3), np.uint8)
+                    none = np.zeros((self.s.h, self.s.w), bool)
+                    imgs, masks = [], []
+                    for i in range(12):
+                        im, mk = self.mem.nearest(self.yaw + yaw * (i + 1) / 12,
+                                                  self.pitch + pitch * (i + 1) / 12, seg=self.seg)
+                        imgs.append(blank if im is None else im)
+                        masks.append(none if mk is None else mk)
                     if np.mean(masks) > 0.10:
                         guide = (np.stack(imgs), np.stack(masks))
         if "shadow" in self.flags and self.mode == "memory" and move is None and self.frames:
@@ -251,7 +258,7 @@ class Episode:
             self.shadow = None
             self.yaw = self.pitch = self.level_pitch = 0.0
             if self.mem is not None:
-                self.mem.keys = []
+                self.mem.keys, self.mem.segs = [], []
                 self.mem.add(new[-1], 0.0, 0.0, force=True, chunk=self.s.chunk_id - 1)
             got = (None, None)
         else:
@@ -277,10 +284,10 @@ class Episode:
                 if first:
                     self.mem.add(new[0], 0.0, 0.0, force=True, chunk=-99)
                 if cover < 0.5 and rewind is None:
-                    for j in (len(new) // 2, len(new) - 1):
+                    for j in range(2, len(new), 3):
                         f = (j + 1) / len(new)
                         self.mem.add(new[j], y0 + got[0] * f, p0 + got[1] * f,
-                                     chunk=self.s.chunk_id - 1, direction=direction)
+                                     chunk=self.s.chunk_id - 1, direction=direction, seg=self.seg)
         if move is None and not facing_start(self.yaw, self.pitch):
             self.been_away = True
         self.records.append({"chunk": self.s.chunk_id - 1, "label": label,
@@ -536,7 +543,7 @@ class Episode:
         k = s.w / 832
         self.K = intrinsics_matrix(fx * k, fy * k, s.w / 2, s.h / 2)
         if self.mode == "memory":
-            self.mem = RotationMemory(self.K, s.w, s.h)
+            self.mem = RotationMemory(self.K, s.w, s.h, min_spacing=2.0)
             if self.timeline is not None:
                 self.mem.exclude0 = self.timeline.target_mask(s.h, s.w)
         plan = parse_actions(case["action"])
