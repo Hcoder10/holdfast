@@ -1,0 +1,115 @@
+{
+ "task_id": "GC025",
+ "prompt": "Walk into the room, then walk back out, then walk in again",
+ "debug": {
+  "attempts": [
+   {
+    "program": {},
+    "verdict": {
+     "action": 1,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "The requested walk-in, walk-out, walk-in sequence is only partially executed with incomplete transitions and the viewpoint never fully exits the room.",
+     "score": 6.5
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 8.6, 11.8, 10.8 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 9.7 (above 12 is visible drift)",
+     "last frame vs first frame difference: 47.8 (below 20 means the video ends on the starting view)"
+    ],
+    "patch": {
+     "symptom": "incomplete walk sequence, never fully exits",
+     "hypothesis": "First-person shadow and landmarks patches are needed to maintain the doorway view on return, allowing proper tracking of the exit and re-entry sequence.",
+     "shadow": true,
+     "landmarks": true,
+     "cam_gain": 3
+    },
+    "applied": {
+     "shadow": true,
+     "landmarks": true,
+     "cam_gain": 3
+    },
+    "recalled": [
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score",
+     "controller: In the OE043 debug session, the camera did not move left or return to the starting point as requested (problem).",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 -> 5.0 (h",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'woman does not walk forward toward Sphinx'; patch {\"register_gain\": 8, \"cam_gain\": 2}; critic score 5.0 -> 5.0 ",
+     "controller: Mentioned an event: OE043 debug session."
+    ],
+    "base_score": 6.5
+   },
+   {
+    "program": {
+     "bank": {
+      "via": "key",
+      "tol": 18,
+      "pos_tol": 1.2,
+      "shadow": true,
+      "landmarks": {
+       "tol": 12,
+       "min_age": 5,
+       "pos_tol": 0.5
+      }
+     },
+     "cam_gain": 3.0
+    },
+    "verdict": {
+     "action": 0,
+     "subject": 1,
+     "picture": 1,
+     "alive": 1,
+     "note": "The requested action (walk in, walk out, walk in again) is not clearly executed; the viewpoint mostly remains stationary or shows repeated similar angles without distinct entrance/exit transitions.",
+     "score": 3.5
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 11.0, 14.3, 11.7 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 9.1 (above 12 is visible drift)",
+     "last frame vs first frame difference: 47.9 (below 20 means the video ends on the starting view)",
+     "state pins on return: 2 (forks 0, dropped 0, landmarks {'kept': 2, 'pins': 2})"
+    ],
+    "delta_vs_previous": -3.0,
+    "patch": {
+     "symptom": "viewpoint does not fully exit room",
+     "hypothesis": "The shadow and landmarks parameters from attempt 1 are anchoring the camera too strongly to its starting position, preventing a clean exit; increasing cam_gain further will override this over-anchoring and allow the full walk-out-walk-in sequence to execute.",
+     "cam_gain": 3,
+     "shadow": false,
+     "landmarks": false
+    },
+    "applied": {
+     "shadow": false,
+     "landmarks": false,
+     "cam_gain": 3
+    },
+    "recalled": [
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'woman does not walk forward toward Sphinx'; patch {\"register_gain\": 8, \"cam_gain\": 2}; critic score 5.0 -> 5.0 ",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic",
+     "controller: Mentioned an event: OE043 debug session."
+    ],
+    "base_score": 6.5
+   },
+   {
+    "program": {
+     "cam_gain": 3.0
+    },
+    "verdict": {
+     "action": 0,
+     "subject": 0,
+     "picture": 1,
+     "alive": 0,
+     "note": "The video shows multiple disconnected hallway/doorway perspectives rather than a coherent first-person walk into a room, out, and back in again.",
+     "score": 1.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 11.0, 14.0, 16.6 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 12.7 (above 12 is visible drift)",
+     "last frame vs first frame difference: 49.0 (below 20 means the video ends on the starting view)"
+    ],
+    "delta_vs_previous": -5.5
+   }
+  ],
+  "kept": 0
+ }
+}

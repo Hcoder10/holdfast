@@ -77,7 +77,10 @@ def run_job(stepper, model, job, data, log=print, after_each=None):
                     return episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
                                            log=lambda *x: None, timeline=tl, player=pl, cfg=c)
                 frames = None
-                if (vcfg or {}).get("repair"):
+                if (vcfg or {}).get("debug"):
+                    import debugger
+                    res, frames = debugger.run(make, stepper, case, img, job.get("seed", 0), vcfg, log=log)
+                elif (vcfg or {}).get("repair"):
                     import repair
                     res, frames = repair.run(make, stepper, case, img, job.get("seed", 0), vcfg, log=log)
                 else:

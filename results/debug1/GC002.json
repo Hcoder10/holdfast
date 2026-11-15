@@ -1,0 +1,139 @@
+{
+ "task_id": "GC002",
+ "prompt": "Move along a rectangular path around the central full-body sculpture with the camera held facing the original direction, then return to the original position.",
+ "debug": {
+  "attempts": [
+   {
+    "program": {},
+    "verdict": {
+     "action": 0,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "The camera does not execute the requested rectangular path around the central sculpture; instead it shows static or minimal movement with repeated similar viewpoints, and the lighting transitions from",
+     "score": 5.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 5.5, 6.7, 6.2 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 23.3 (above 12 is visible drift)",
+     "last frame vs first frame difference: 47.1 (below 20 means the video ends on the starting view)"
+    ],
+    "patch": {
+     "symptom": "camera does not execute rectangular path, static frames",
+     "hypothesis": "The camera movement command is not being registered with sufficient gain, and the view is not being anchored to prevent colour drift and ensure return to start position.",
+     "cam_gain": 3,
+     "shadow": true,
+     "landmarks": true,
+     "anchor": 0.8
+    },
+    "applied": {
+     "anchor": 0.8,
+     "shadow": true,
+     "landmarks": true,
+     "cam_gain": 3
+    },
+    "recalled": [
+     "controller: In the OE043 debug session, the camera did not move left or return to the starting point as requested (problem).",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score",
+     "controller: The camera did not move left or return to the starting point during the debug session on OE043 (problem).",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 -> 5.0 (h"
+    ],
+    "base_score": 5.0
+   },
+   {
+    "program": {
+     "anchor_stats": 0.8,
+     "bank": {
+      "via": "key",
+      "tol": 18,
+      "pos_tol": 1.2,
+      "shadow": true,
+      "landmarks": {
+       "tol": 12,
+       "min_age": 5,
+       "pos_tol": 0.5
+      }
+     },
+     "cam_gain": 3.0
+    },
+    "verdict": {
+     "action": 2,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "The camera completes a rectangular path around the central statue and returns to origin as requested, but the crowd of figures in the background appears largely static and frozen throughout the sequen",
+     "score": 8.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 11.8, 8.0, 12.4 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 17.0 (above 12 is visible drift)",
+     "last frame vs first frame difference: 21.5 (below 20 means the video ends on the starting view)",
+     "state pins on return: 1 (forks 0, dropped 0, landmarks {'kept': 4, 'pins': 1})"
+    ],
+    "delta_vs_previous": 3.0,
+    "patch": {
+     "symptom": "background figures frozen, incomplete return to origin",
+     "hypothesis": "The landmark pinning is too restrictive (only 1 pin retained, forks dropped); increasing landmark tolerance and age threshold will allow better state capture during the rectangular path and smoother return to origin.",
+     "landmarks": true,
+     "bank": {
+      "via": "key",
+      "tol": 18,
+      "pos_tol": 1.2,
+      "shadow": true,
+      "landmarks": {
+       "tol": 16,
+       "min_age": 2,
+       "pos_tol": 0.8
+      }
+     }
+    },
+    "applied": {
+     "landmarks": true
+    },
+    "recalled": [
+     "[program from controller] debug session on OE005 (first person; request: Wait and observe.): symptom 'scene frozen, no frame-to-frame motion'; patch {\"cam_gain\": 2}; critic score 4.0 -> 4.0 (no change). Hypothesis was: First-person viewpoint with 'wait and obs",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 -> 5.0 (h",
+     "controller: The debug session on IF011 had static frames with no forward movement (problem).",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 ->",
+     "controller: In the OE043 debug session, the camera did not move left or return to the starting point as requested (problem)."
+    ],
+    "base_score": 8.0
+   },
+   {
+    "program": {
+     "anchor_stats": 0.8,
+     "bank": {
+      "via": "key",
+      "tol": 18,
+      "pos_tol": 1.2,
+      "shadow": true,
+      "landmarks": {
+       "tol": 12,
+       "min_age": 5,
+       "pos_tol": 0.5
+      }
+     },
+     "cam_gain": 3.0
+    },
+    "verdict": {
+     "action": 2,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "The camera completes a rectangular path around the central sculpture and returns to the original position as requested, but the scene exhibits noticeable color shifting (warming to reddish tones in la",
+     "score": 8.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 11.8, 8.0, 12.4 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 17.0 (above 12 is visible drift)",
+     "last frame vs first frame difference: 21.5 (below 20 means the video ends on the starting view)",
+     "state pins on return: 1 (forks 0, dropped 0, landmarks {'kept': 4, 'pins': 1})"
+    ],
+    "delta_vs_previous": 0.0
+   }
+  ],
+  "kept": 1
+ }
+}

@@ -17,10 +17,16 @@ unmodified model. The writes that earned their place act at three levels of the 
 |---|---|---|---|
 | Attention to text | Objective register | The model under-follows the request | Interaction 2.05 to 2.30 (171 cases) |
 | Latents carried forward | Re-anchoring | The picture drifts over a long rollout | Insight 2.30 to 2.57 (30 cases) |
-| Conditioning input | Shadow world, written back on return | The scene is not the same when the camera looks back | Geometry 2.48 to 2.82 (95 held-out cases, post hoc arm) |
+| Conditioning input | Shadow world, written back on return (post hoc) | The scene is not the same when the camera looks back | Geometry 2.45 to 2.60 over 171 cases, out-of-sight 1.94 to 1.83: overall unchanged |
 
 Overall on the full 171-case benchmark: **2.31**, against 2.10 for the unmodified model and 2.12 published for
-Genie 3. With the third write, on the held-out half: 2.40.
+Genie 3. The first two writes are in that pre-registered program. The third was added afterwards: it reached 2.40
+on the held-out half, and 2.32 once it was run on all 171 cases, so it moves geometry and not the total.
+
+On two photographs of the hackathon venue (not benchmark cases), walking or sliding the camera away and back:
+the unmodified model ends on a different view with invented objects; with Holdfast the video ends on the view
+it started from (`scripts/make_venue.py`; the clips are kept out of the repository because the photographs show
+bystanders).
 
 ## Results
 
@@ -93,6 +99,20 @@ Against the unmodified model: +0.30, 95% interval +0.02 to +0.60. Against the pr
 (-0.11 to +0.28), all of it geometry (+0.34), which moves past Genie 3's 2.74. Because this arm was chosen after
 looking at held-out failures, 2.31 remains the figure we stand behind; 2.40 is what the same data says about the
 revision. Its test on 11 development cases, before it was run here, gave +0.26 per case.
+
+**The shadow world on all 171 cases** (`results/full_benchmark_v2.json`, `eval/full_v2.py`). To check the
+post hoc arm, the 48 first-person cases of the development half were also regenerated with it and judged twice.
+
+| All 171 cases | Geometry | Interaction | Insight | Out-of-sight | Overall |
+|---|---|---|---|---|---|
+| Final state program (pre-registered) | 2.45 | 2.30 | 2.57 | 1.94 | 2.31 |
+| With the shadow world (post hoc) | 2.60 | 2.30 | 2.57 | 1.83 | 2.32 |
+
+The held-out gain did not replicate: +0.01 overall against the pre-registered program (95% interval -0.11 to
++0.13), geometry +0.15, out-of-sight -0.11. On the development cases alone geometry was flat (2.42 to 2.38) and
+out-of-sight fell (1.82 to 1.62); that comparison is noisier, because the development control was judged once,
+in a different batch. The 2.40 above was a favourable draw. What survives is a geometry effect that is paid for
+on out-of-sight cases, where the pinned frame brings the scene back unchanged.
 
 Development half (single judging, for reference): unmodified model 2.12 on 76 cases; objective in the
 prompt 2.62 against 2.33 on 24 of them. That +0.3 shrank to +0.14 on the held-out half, which is what
@@ -169,6 +189,43 @@ kept. The winning program is written to past.dev and later episodes start from t
 the most similar scene. Checked against the orchestrator's judgments on 40 videos: the critic agrees
 on gross outcomes and misses subtle ones (it did not notice a first-person car interior disappearing).
 
+### State-program debugger (built 15 Nov, run on six cases)
+
+`debugger.py` replaces the fixed rules above with a model that debugs the rollout. Each case starts from the
+unmodified model. The debugger runs it, then reads the critic's verdict and a state report measured from the
+rollout (motion per third of the video, colour shift from the first frame, whether it ends on the starting
+view, commanded against measured turns, which pins and registers fired), recalls from past.dev what earlier
+sessions found for the same symptom, and patches the state program: attention gain on the request, re-anchoring
+strength, shadow world, landmarks, the Exa-derived scene action, camera-conditioning gain, or new noise. It
+reruns, keeps the better program and writes the outcome back, so later scenes start from what worked. A patch
+is a change to a small config, not to code.
+
+| Case | Critic score, unmodified | Best after debugging | Program the debugger arrived at |
+|---|---|---|---|
+| GC002, rectangular path around a sculpture | 5.0 | 8.0 | re-anchoring 0.8, shadow world, landmarks, camera gain 3 |
+| GC010, turn right and back | 5.0 | 8.0 | shadow world, landmarks, camera gain 3 |
+| IF011, walk to the Sphinx | 3.0 | 5.0 | request gain 16, camera gain 3 |
+| GC025, walk in, out, in | 6.5 | 6.5 | none: both patches scored lower and were discarded |
+| OE005, wait and observe | 4.0 | 4.0 | none |
+| OE043, strafe left and back | 5.0 | 5.0 | none |
+
+Full sessions: `results/debugger_sessions.md`. What this shows and does not show: the loop runs end to end, it
+recalled notes across cases (the sculpture session read what the strafe session had just recorded), and it kept
+the unmodified run when its patches made things worse. The scores are its own critic's (Claude Haiku on frames,
+0 to 8), not the benchmark judge's, and that critic is the weak part: it called a rollout with clear motion
+"completely static", and it accepted a turn that the odometry measured as several full rotations. The debugger
+also changed several controls at once when asked for one, and on the strafe case repeated a patch that had not
+helped. None of this has been scored by the benchmark judge.
+
+### Reading the state
+
+`loop/read_probes.py` trains linear probes on recorded residual activations (347 episodes, 80 cases, eight
+blocks, mean over image tokens, scenes held out). The chunk's camera action is decodable at 0.92 accuracy
+against a 0.22 majority baseline, from every recorded block, on a pass where the action was not an input.
+"Back at the start view after an excursion" reaches AUC 0.88 against 0.78 for a baseline that knows only the
+time and the action. Heading and turn size are not readable beyond that baseline. Figure:
+`docs/read_probes.png`; numbers: `results/read_probes.json`. This is a read interface, not a score gain.
+
 ## What did not work
 
 Each of these was built, run and looked at; details and sweep names are in `results/hillclimb_log.md`.
@@ -191,6 +248,9 @@ Each of these was built, run and looked at; details and sweep names are in `resu
 | Launch-time planner (a small LLM choosing the program) | 1.59 vs 2.19 on 21 cases: its menu described the alive write as a fix, so it switched it on everywhere |
 | Motion written into the starting noise (frames warped by the commanded move) | Ran on every commanded chunk; no advance on the stuck cases |
 | Steering only the unseen copy with the Exa sentence (shadow world) | 2.16 vs 2.05 on 14 cases, interval -0.77 to +0.95: large swings both ways, not distinguishable from no effect |
+| Exa-derived action sentence in the register for still-camera scenes, constant at gain 8 | Insight 2.40 vs 2.86 on 15 cases, two passes. The judge's reasons: the subject repeats one motion with no accumulated change, or the scene sits in the described state. A sentence that stays on is re-satisfied every chunk |
+| The same as a three-stage timeline (early, middle, late), always on at gain 4 | 2.14 vs 2.51 on the same 15 cases |
+| Landmarks: several significant views kept and pinned on arrival, on top of the shadow world | First test, 12 cases: 2.12 vs 2.33 geometry, interval -0.48 to +0.12. Two bugs found afterwards: the trigger counted the agent player's top-up steps, so it never fired in 6 of 12 cases, and the start view was pinned as the wrong kind of latent and decoded washed out. With both fixed, only 4 paired cases were judged before the deadline (+0.32, interval -0.25 to +1.30). The one case built for it (walk in, out, in) improved in both runs (1.0 and 5.0 to 5.0 and 4.0; 2.4 and 1.0 to 4.0 and 3.6). Not established |
 | Predicting the judge from recorded activations and latent reads | At or below chance at picking the better of two reruns (0.41-0.44 over 238 pairs), although a perfect picker would gain +0.92 |
 
 ## Where it still breaks
@@ -212,7 +272,10 @@ sweep of one write at several strengths, pull frame strips (`scripts/view_grid.p
 against the public rubric wording, keep, drop or debug. Three results came from debugging rather
 than tuning: residual writes were collapsing because they were applied on the sampling steps that set
 colour; the attention-gain patch had been installed in a module the fast model does not use (the run
-logged zero applications); and the heading used by the new writes restarted at every walk step.
+logged zero applications); and the heading used by the new writes restarted at every walk step. Two more on
+the last morning: a frame pinned on return to the start decoded washed out, because the VAE's first latent
+(one frame) is not interchangeable with its later ones (four frames); and a write that stays on for the whole
+episode suppresses the scene's own evolution, which only the judge's written reasons revealed.
 Every write records how many times it was actually applied, so a silent no-op shows up as a zero.
 
 ## past.dev challenge

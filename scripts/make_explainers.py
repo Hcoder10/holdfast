@@ -493,7 +493,7 @@ def make_shadow():
     b.text(930, 412, "copy of the state: keeps running the view you left", 24, BLUE, align="r")
     b.text(548, 308, "its camera held still", 24, BLUE)
 
-    result(b, "geometry score", "2.48", "2.82", "(95 held-out cases, post hoc arm)")
+    result(b, "geometry score", "2.45", "2.60", "(171 cases, post hoc; total unchanged)")
     return b
 
 

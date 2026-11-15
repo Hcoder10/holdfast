@@ -1,0 +1,106 @@
+{
+ "task_id": "OE005",
+ "prompt": "Wait and observe.",
+ "debug": {
+  "attempts": [
+   {
+    "program": {},
+    "verdict": {
+     "action": 0,
+     "subject": 2,
+     "picture": 1,
+     "alive": 0,
+     "note": "Scene is completely static across all frames with no evolution or movement, failing the 'wait and observe' directive.",
+     "score": 4.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 5.7, 5.2, 5.6 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 5.9 (above 12 is visible drift)",
+     "last frame vs first frame difference: 36.1 (below 20 means the video ends on the starting view)"
+    ],
+    "patch": {
+     "symptom": "scene frozen, no frame-to-frame motion",
+     "hypothesis": "First-person viewpoint with 'wait and observe' request needs shadow and landmarks enabled to anchor the observer position and track the scene evolution, similar to the OE043 camera movement case.",
+     "shadow": true,
+     "landmarks": true,
+     "cam_gain": 2
+    },
+    "applied": {
+     "cam_gain": 2
+    },
+    "recalled": [
+     "controller: The debug session on IF011 had static frames with no forward movement (problem).",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 ->",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 -> 5.0 (h",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'woman does not walk forward toward Sphinx'; patch {\"register_gain\": 8, \"cam_gain\": 2}; critic score 5.0 -> 5.0 ",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'woman does not walk forward toward Sphinx'; patch {\"register_gain\": 8, \"cam_gain\": 2}; critic score 5.0 ->"
+    ],
+    "base_score": 4.0
+   },
+   {
+    "program": {
+     "cam_gain": 2.0
+    },
+    "verdict": {
+     "action": 0,
+     "subject": 2,
+     "picture": 1,
+     "alive": 0,
+     "note": "The scene is completely frozen across all frames with no meaningful evolution or movement despite the request to 'wait and observe.'",
+     "score": 4.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 5.7, 5.2, 5.6 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 5.9 (above 12 is visible drift)",
+     "last frame vs first frame difference: 36.1 (below 20 means the video ends on the starting view)"
+    ],
+    "delta_vs_previous": 0.0,
+    "patch": {
+     "symptom": "scene completely static no frame evolution",
+     "hypothesis": "First-person 'wait and observe' requires landmarks and shadow to maintain viewpoint memory while scene_action drives subject motion; without these, the model has no directive to animate the children/ball.",
+     "shadow": true,
+     "landmarks": true,
+     "scene_action": "timeline",
+     "cam_gain": 1
+    },
+    "applied": {
+     "scene_action": "timeline",
+     "cam_gain": 1
+    },
+    "recalled": [
+     "controller: The debug session on IF011 had static frames with no forward movement (problem).",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 ->",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'static frames with no forward movement'; patch {\"register_gain\": 16, \"cam_gain\": 3}; critic score 3.0 -> 5.0 (h",
+     "[program from controller] debug session on IF011 (third person; request: The woman walks forward to the base of the Great Sphinx of Egypt): symptom 'woman does not walk forward toward Sphinx'; patch {\"register_gain\": 8, \"cam_gain\": 2}; critic score 5.0 -> 5.0 ",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score"
+    ],
+    "base_score": 4.0
+   },
+   {
+    "program": {
+     "act_register": {
+      "stages": true,
+      "gain": 4,
+      "total": 40
+     }
+    },
+    "verdict": {
+     "action": 0,
+     "subject": 0,
+     "picture": 1,
+     "alive": 0,
+     "note": "The scene is essentially frozen with no meaningful evolution across frames; children and ball remain in identical positions, and multiple frames show duplicate or near-identical compositions suggestin",
+     "score": 1.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 6.2, 6.6, 7.0 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 4.9 (above 12 is visible drift)",
+     "last frame vs first frame difference: 39.3 (below 20 means the video ends on the starting view)"
+    ],
+    "delta_vs_previous": -3.0
+   }
+  ],
+  "kept": 0
+ }
+}

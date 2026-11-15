@@ -1,0 +1,127 @@
+{
+ "task_id": "GC010",
+ "prompt": "Turn right 90 degrees, then turn back left to the starting view",
+ "debug": {
+  "attempts": [
+   {
+    "program": {},
+    "verdict": {
+     "action": 0,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "Camera motion requested (turn right 90°, then left back to start) does not occur; viewpoint remains stationary with only zooming and framing adjustments instead of the required camera rotation.",
+     "score": 5.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 20.1, 26.8, 22.4 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 36.1 (above 12 is visible drift)",
+     "last frame vs first frame difference: 56.1 (below 20 means the video ends on the starting view)",
+     "camera turns commanded +0 deg, measured -17 deg over 8 chunks"
+    ],
+    "patch": {
+     "symptom": "camera turn not executed first person",
+     "hypothesis": "The camera rotation command is not being properly registered and executed; raising cam_gain will amplify the turning signal in the first-person viewpoint controller.",
+     "shadow": true,
+     "landmarks": true,
+     "cam_gain": 3
+    },
+    "applied": {
+     "shadow": true,
+     "landmarks": true,
+     "cam_gain": 3
+    },
+    "recalled": [
+     "controller: In the OE043 debug session, the camera did not move left or return to the starting point as requested (problem).",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score"
+    ],
+    "base_score": 5.0
+   },
+   {
+    "program": {
+     "bank": {
+      "via": "key",
+      "tol": 18,
+      "pos_tol": 1.2,
+      "shadow": true,
+      "landmarks": {
+       "tol": 12,
+       "min_age": 5,
+       "pos_tol": 0.5
+      }
+     },
+     "cam_gain": 3.0
+    },
+    "verdict": {
+     "action": 2,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "Camera motion appears to execute the requested 90-degree right turn and return, but some frames show repetition and the scene exhibits noticeable color inconsistency across the sequence.",
+     "score": 8.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 28.8, 37.0, 27.6 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 56.0 (above 12 is visible drift)",
+     "last frame vs first frame difference: 68.1 (below 20 means the video ends on the starting view)",
+     "camera turns commanded +0 deg, measured -448 deg over 8 chunks",
+     "state pins on return: 1 (forks 2, dropped 0, landmarks {'kept': 1, 'pins': 0})"
+    ],
+    "delta_vs_previous": 3.0,
+    "patch": {
+     "symptom": "camera turn not executed, color drift persists",
+     "hypothesis": "The measured camera turn of -448 degrees indicates the turn is happening in the latent state but not properly manifesting in output frames; increasing anchor further and disabling landmarks (which may be interfering with return-to-start) should stabilize the color and allow the rotation to display correctly.",
+     "anchor": 0.8,
+     "shadow": true,
+     "landmarks": false,
+     "cam_gain": 3.0
+    },
+    "applied": {
+     "anchor": 0.8,
+     "shadow": true,
+     "landmarks": false,
+     "cam_gain": 3
+    },
+    "recalled": [
+     "[program from controller] debug session on GC002 (first person; request: Move along a rectangular path around the central full-body sculpture with the camera held ): symptom 'camera does not execute rectangular path, static frames'; patch {\"anchor\": 0.8, \"shad",
+     "controller: In the OE043 debug session, the camera did not move left or return to the starting point as requested (problem).",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic",
+     "[program from controller] debug session on OE043 (first person; request: Move the camera left 5 steps, then move back to the starting point.): symptom 'camera does not move left or return'; patch {\"shadow\": true, \"landmarks\": true, \"cam_gain\": 3}; critic score",
+     "controller: The camera did not move left or return to the starting point during the debug session on OE043 (problem).",
+     "[program from controller] debug session on GC025 (first person; request: Walk into the room, then walk back out, then walk in again): symptom 'viewpoint does not fully exit room'; patch {\"shadow\": false, \"landmarks\": false, \"cam_gain\": 3}; critic score 6.5"
+    ],
+    "base_score": 8.0
+   },
+   {
+    "program": {
+     "bank": {
+      "via": "key",
+      "tol": 18,
+      "pos_tol": 1.2,
+      "shadow": true
+     },
+     "cam_gain": 3.0,
+     "anchor_stats": 0.8
+    },
+    "verdict": {
+     "action": 2,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "Camera motion appears to execute the requested 90-degree right turn and return, but some frames show repetitive positioning and the scene exhibits visible compression artifacts and slight color incons",
+     "score": 8.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 34.9, 37.7, 28.0 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 38.9 (above 12 is visible drift)",
+     "last frame vs first frame difference: 57.4 (below 20 means the video ends on the starting view)",
+     "camera turns commanded +0 deg, measured +314 deg over 8 chunks",
+     "state pins on return: 1 (forks 2, dropped 0, landmarks None)"
+    ],
+    "delta_vs_previous": 0.0
+   }
+  ],
+  "kept": 1
+ }
+}

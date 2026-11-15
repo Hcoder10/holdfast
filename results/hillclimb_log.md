@@ -354,3 +354,27 @@ Shadow world 2.05; with the unseen copy given the later-state sentence at gain 8
 95% interval -0.77 to +0.95; 6 cases better, 4 worse, 4 unchanged. The swings are large in both directions (1.0 to
 4.5 and 1.5 to 3.8 one way; 4.5 to 1.0 and 3.8 to 2.0 the other), so on 14 cases this is not distinguishable from
 no effect. Not kept in any reported configuration.
+
+
+## 15 Nov, 10:10-12:10: last-morning sweeps
+
+| sweep | what | cases | judged result (Gemini 3.1 Pro, two passes unless noted) | status |
+|---|---|---|---|---|
+| final2dev | shadow-world program on the development half's first-person cases | 48 | with the held-out 46: all 171 cases 2.32 vs 2.31 pre-registered (+0.01, CI -0.11 to +0.13); geometry +0.15, out-of-sight -0.11. Dev cases alone: GC 2.42 -> 2.38, OE 1.82 -> 1.62 (dev control judged once, other batch). `results/full_benchmark_v2.json` | held-out 2.40 did not replicate |
+| sweep27 | Exa-derived action sentence in the register, constant gain 8, still-camera insight cases | 15 | 2.40 vs 2.86. Judge: looping motion, frozen scene | dropped |
+| sweep29 | same, as an impulse (gain 8 for 5 chunks, then released) and as a 3-stage timeline (gain 4, always on) | 15 | control 2.51, impulse 2.75 (+0.25, CI -0.32 to +0.82, 7 better / 6 worse), timeline 2.14 (-0.37) | impulse to held-out (sweep32) |
+| sweep28 (cancelled), sweep28b | landmarks on top of the shadow world | 12 | GC 2.12 vs 2.33, OE 1.00 vs 1.17; paired -0.19 (CI -0.48 to +0.12). Control was final2dev (other batch). Judge repeat spread 0.93 | two bugs found, see below |
+| sweep30 (cancelled), sweep31 | landmarks with both bugs fixed, shadow-only arm generated alongside | 10 | first tally ran before every clip had finished: 4 paired cases, +0.32 (CI -0.25 to +1.30). Re-judged on the full set as sw31 | see results/sweep31_full.json if present |
+| venue1-3 | two photographs of the venue, custom cases, unmodified vs Holdfast | 5 + 5 | not judged; frames | demo only, kept out of git |
+| debug1 | state-program debugger from the unmodified model, up to 3 attempts | 6 | critic scores only: 3 improved (5 -> 8, 5 -> 8, 3 -> 5), 3 unchanged. `results/debugger_sessions.md` | prototype |
+
+Bugs found on the last morning:
+- The first export of final2dev's judge inputs failed silently and the chain "judged" nothing; caught at the tally (0 cases), re-exported, judged.
+- sweep28 was launched without the agent player that its control used (36 vs 42 chunks); cancelled after three cases, relaunched as sweep28b.
+- Landmarks never fired in 6 of 12 cases of sweep28b: the position count included the agent player's top-up steps, so "home" was out of tolerance. Those six ran the same program as the control and still differed by up to 1.8 points per case, i.e. rerun plus judge noise. Fixed: landmark position counts scripted moves only.
+- The start view pinned on return decoded washed out with a grid pattern for the last four frames: the VAE's first latent frame (one image) was written into a later slot (four frames). Fixed: the start view is encoded as a still clip and its last latent is used (`stepper.start_late`). The overnight "pin to the first frame" arm had the same defect.
+- sweep31's judging chain counted case folders, which exist before a clip is finished, so it exported 6 of 10 cases per arm. Chains now count result.json files.
+
+Read probes (offline, `loop/read_probes.py`): action kind 0.92 accuracy (majority 0.22); back-home vs away AUC 0.88 (time+action baseline 0.78); heading R2 0.31 (0.10); turn size not above baseline.
+
+Modal, this block (approximate): final2dev 20, sweep27 10, venue1 6, sweep28 2, sweep28b 8, sweep29 10, venue2 7, sweep30 2, sweep31 13, venue3 4, debug1 10, sweep32 10 = about 100 USD. Gemini: about 45 USD.

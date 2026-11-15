@@ -1,0 +1,99 @@
+{
+ "task_id": "IF011",
+ "prompt": "The woman walks forward to the base of the Great Sphinx of Egypt",
+ "debug": {
+  "attempts": [
+   {
+    "program": {},
+    "verdict": {
+     "action": 0,
+     "subject": 2,
+     "picture": 0,
+     "alive": 0,
+     "note": "The video is a static repetition of identical frames with no forward movement toward the Sphinx; the scene appears completely frozen with severe tiling/duplication artifacts.",
+     "score": 3.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 2.7, 2.5, 2.3 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 0.3 (above 12 is visible drift)",
+     "last frame vs first frame difference: 10.9 (below 20 means the video ends on the starting view)"
+    ],
+    "patch": {
+     "symptom": "static frames with no forward movement",
+     "hypothesis": "The model is not receiving clear instruction to move the subject forward; raising register_gain will amplify attention to the walking request, and increasing cam_gain will ensure the forward motion toward the Sphinx is executed.",
+     "register_gain": 16,
+     "cam_gain": 3
+    },
+    "applied": {
+     "register_gain": 16,
+     "cam_gain": 3
+    },
+    "recalled": [],
+    "base_score": 3.0
+   },
+   {
+    "program": {
+     "register": {
+      "gain": 16,
+      "when": "third person",
+      "replace": true
+     },
+     "cam_gain": 3.0
+    },
+    "verdict": {
+     "action": 0,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "The woman does not walk forward toward the Great Sphinx; instead she remains stationary or moves laterally across the frame, failing to carry out the requested action.",
+     "score": 5.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 2.8, 3.9, 4.3 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 1.8 (above 12 is visible drift)",
+     "last frame vs first frame difference: 22.2 (below 20 means the video ends on the starting view)",
+     "request register gain 16 (1000 attention calls biased)"
+    ],
+    "delta_vs_previous": 2.0,
+    "patch": {
+     "symptom": "woman does not walk forward toward Sphinx",
+     "hypothesis": "The register gain of 16 is too high and causing the model to over-attend to the request text at the expense of coherent motion generation; reducing it will allow the world model to balance request following with natural forward locomotion.",
+     "register_gain": 8,
+     "cam_gain": 2
+    },
+    "applied": {
+     "register_gain": 8,
+     "cam_gain": 2
+    },
+    "recalled": [],
+    "base_score": 5.0
+   },
+   {
+    "program": {
+     "register": {
+      "gain": 8,
+      "when": "third person",
+      "replace": true
+     },
+     "cam_gain": 2.0
+    },
+    "verdict": {
+     "action": 0,
+     "subject": 2,
+     "picture": 1,
+     "alive": 1,
+     "note": "The woman does not walk forward; she remains in a static or nearly identical position across all frames, failing to approach the sphinx as requested.",
+     "score": 5.0
+    },
+    "state_report": [
+     "frame-to-frame motion by third of the video: 3.1, 3.0, 2.8 (below 2 is nearly frozen)",
+     "mean colour shift first to last frame: 0.7 (above 12 is visible drift)",
+     "last frame vs first frame difference: 10.1 (below 20 means the video ends on the starting view)",
+     "request register gain 8 (2000 attention calls biased)"
+    ],
+    "delta_vs_previous": 0.0
+   }
+  ],
+  "kept": 1
+ }
+}

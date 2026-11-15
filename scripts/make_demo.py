@@ -125,7 +125,7 @@ SEGMENTS = [
     dict(asked="Turn the camera right, then turn back to the original view (a western street).",
          left=("Without the shadow world", V + "sweep22/lingbot2_14b_open_base/GC010.mp4"),
          right=("Write 3: shadow world, written back on return", V + "sweep22/lingbot2_14b_open_shadow/GC010.mp4"),
-         look="Geometry on the held-out half: 2.48 without this write, 2.82 with it.", seconds=10),
+         look="Over all 171 cases: geometry 2.45 without this write, 2.60 with it; it costs a little on out-of-sight.", seconds=10),
     dict(asked="The woman walks forward to the base of the Great Sphinx.",
          left=("Unmodified model", V + "sweep18/lingbot2_14b_open_base/IF011.mp4"),
          right=("Request at 8x attention", V + "sweep16/lingbot2_14b_open_reg8/IF011.mp4"),
@@ -138,7 +138,7 @@ SEGMENTS = [
 def results_card():
     r = json.load(open(os.path.join(ROOT, "results", "full_benchmark.json")))
     a, d = r["arms"], r["final_minus_baseline"]
-    v2 = json.load(open(os.path.join(ROOT, "results", "held_out_v2.json")))["arms"]["v2"]
+    v2 = json.load(open(os.path.join(ROOT, "results", "full_benchmark_v2.json")))["arms"]["v2"]
 
     def row(name, t):
         return (f"{name}:  {t['overall']:.2f}   (geometry {t['GC']:.2f}, interaction {t['IF']:.2f}, "
@@ -151,8 +151,8 @@ def results_card():
                  ("", 12, False, DIM),
                  (f"Holdfast minus unmodified, paired: {d['overall']:+.2f}  (95% interval {d['ci95'][0]:+.2f} to {d['ci95'][1]:+.2f})",
                   25, False, FG),
-                 (f"With the shadow world, on the 95 held-out cases: {v2['overall']:.2f} (geometry {v2['by_dim']['GC']:.2f}). "
-                  "That arm was designed after the held-out result was known.", 23, False, DIM)], 11)
+                 (f"With the shadow world (added afterwards), all 171 cases: {v2['overall']:.2f}; geometry {v2['GC']:.2f}, "
+                  f"out-of-sight {v2['OE']:.2f}. It moves geometry, not the total.", 23, False, DIM)], 11)
 
 
 if __name__ == "__main__":
