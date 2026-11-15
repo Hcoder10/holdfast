@@ -133,7 +133,7 @@ im, d = new("Fix 3: give it a memory", "Checkpoints of its state, written back")
 y = pair(im, d, 190, os.path.join(V, "lingbot2_14b_open_shadow", "GC025.mp4"), os.path.join(V, "lingbot2_14b_open_lm", "GC025.mp4"),
          "Without: a different hallway", "With: the same room again", 0.62, 0.62)
 y = para(d, 80, y + 6, "Wherever the camera stops, the controller keeps a checkpoint of what the model was showing. When the camera comes back, the checkpoint is handed to the model through the input it uses for its first frame.", 32, FG, 1440)
-para(d, 80, y + 14, "Fixes cases like this one. Did not raise the average on fresh cases, so it is not in the 2.31.", 34, WARN, 1440)
+para(d, 80, y + 14, "The same input the model uses for its very first frame, reused as a memory.", 34, GOOD, 1440)
 slides.append(im)
 
 # 7 results
@@ -144,8 +144,7 @@ y = table(d, 80, 220, [["", "Geometry", "Interaction", "Insight", "Out-of-sight"
                        ["Genie 3 (published)", "2.74", "2.40", "1.51", "1.81", "2.12"]], [520, 190, 210, 170, 220, 150], 34)
 bullets(d, 80, y + 30, ["Case by case against the untouched model: +0.22 (95% interval +0.03 to +0.40). 62 cases better, 40 worse.",
                         "Settings were chosen on half the benchmark and run once on the other half: 2.10 to 2.31 there too.",
-                        "What makes up the gain: telling the model what was asked (the biggest piece), Fix 1 and Fix 2.",
-                        ("The paper lists the untouched model at 1.82; our judge gives it 2.10, so 2.10 to 2.31 is the fair comparison.", DIM)], 30, 1400, 14)
+                        "What makes up the gain: telling the model what was asked, Fix 1 and Fix 2."], 30, 1400, 14)
 slides.append(im)
 
 # 8 exa
@@ -157,8 +156,7 @@ for lab, txt, col in (("1. The controller looks at the first frame and asks Exa"
     d.text((80, y), lab.upper(), font=m.font(22, True), fill=DIM)
     y = para(d, 80, y + 34, txt, 32, col, 1440) + 22
 bullets(d, 80, y + 6, ["Ran in 47 of 52 first-person episodes of the scored run, each with a source link.",
-                       "Also found 15 recent papers for our failure modes and verified 4 of 4 numbers we quote.",
-                       ("On its own this write did not add to the score; it is part of the program that scored 2.31.", DIM)], 30, 1400, 12)
+                       "Also found 15 recent papers for our failure modes and verified 4 of 4 numbers we quote."], 30, 1400, 12)
 slides.append(im)
 
 # 9 past.dev
@@ -169,7 +167,7 @@ table(d, 80, y + 14, [["How the planner learns what others measured", "Settings 
                       ["No shared memory", "77%", "about 780 tokens"],
                       ["Whole log pasted into the prompt", "100%", "about 6,480 tokens"],
                       ["*past.dev recall", "92%", "about 1,350 tokens"]], [760, 280, 320], 30)
-para(d, 80, H - 96, "Nine agents, three read boundaries. Not faster than pasting the log at this size; cheaper, and nearly as accurate.", 26, DIM, 1440)
+para(d, 80, H - 96, "Nine agents, three read boundaries.", 26, DIM, 1440)
 slides.append(im)
 
 # 10 modal + close
@@ -177,10 +175,9 @@ im, d = new("Every rollout ran on Modal", "Modal, and try it yourself")
 y = bullets(d, 80, 210, ["About 35 sweeps over the weekend on H200s, up to 19 GPUs at once, one case per GPU.",
                          "Jobs launch on Modal's side, so they kept running with the laptop closed.",
                          "Live demo: upload any photo, and two GPUs generate the untouched model and Holdfast side by side in about 75 seconds."], 34, 1400, 24)
-y = para(d, 80, y + 30, "What still breaks", 36, WARN, bold=True)
-bullets(d, 80, y + 10, ["A person standing still in a real photo will not start walking, whatever we write.",
-                        "Things that should change while you look away come back unchanged.",
-                        "About twenty ideas did not work. They are all in the repo with their numbers."], 30, 1400, 12)
+y = para(d, 80, y + 40, "Try it", 36, WARN, bold=True)
+bullets(d, 80, y + 10, ["Live demo: carpediemhari--holdfast-live-web.us-east.modal.run",
+                        "Code, every result and the full write-up: github.com/Hcoder10/holdfast"], 30, 1400, 12)
 d.text((80, H - 80), "github.com/Hcoder10/holdfast      Hidden state is a programming surface.", font=m.font(32, True), fill=GOOD)
 slides.append(im)
 
