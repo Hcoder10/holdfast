@@ -380,7 +380,7 @@ class LingBotStepper:
 
     # ------------------------------------------------------ memory via attention
     @torch.no_grad()
-    def write_sink(self, lat):
+    def write_sink(self, lat, slot=0):
         """Graft 2: put remembered content where the model already looks for anchors.
 
         The model keeps its first `sink_size` latent frames in the attention cache
@@ -411,9 +411,10 @@ class LingBotStepper:
             p.model(x=[lat.to(self.device)], t=torch.stack([self.timesteps[-1] * 0.0]).to(self.device),
                     cross_attn_first_call=self.cross_first, **kwargs)
         self.cross_first = False
+        a = slot * n          # slot 0: first three sink frames, slot 1: the next three
         for dst, src in zip(self.self_cache, scratch):
-            dst["k"][:, :n] = src["k"][:, :n]
-            dst["v"][:, :n] = src["v"][:, :n]
+            dst["k"][:, a:a + n] = src["k"][:, :n]
+            dst["v"][:, a:a + n] = src["v"][:, :n]
         del scratch
 
     # ------------------------------------------------------------------ step

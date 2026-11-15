@@ -174,6 +174,52 @@ class Episode:
         self.level_pitch = 0.0        # pitch the camera is meant to hold
         self.mem = None
 
+    # -- side memory, tensor channel: evicted views, indexed by heading ---------
+    def _bank_read(self, yaw, pitch):
+        """The model's rolling attention holds about three seconds. Every chunk's latents
+        are kept here with the heading and position they were generated at. Before a
+        chunk, if the camera is about to face a heading it has faced before (same
+        position, within `tol` degrees, and already evicted from the rolling window),
+        that view's latents are written back into the second half of the attention
+        sink, so the model attends to the real earlier frames, already pixel-aligned
+        because they were recorded at this heading. The first half of the sink keeps
+        the episode's first frames."""
+        b = getattr(self, "bank", None)
+        if b is None or self.s.chunk_id < 3:
+            return
+        ty = (self.yaw + yaw + 180.0) % 360.0 - 180.0
+        tp = self.pitch + pitch
+        best = None
+        for e in b["views"]:
+            if e["pos"] != tuple(self.pos) or e["chunk"] > self.s.chunk_id - b["min_age"] or e["chunk"] < 1:
+                continue
+            d = max(abs((e["yaw"] - ty + 180.0) % 360.0 - 180.0), abs(e["pitch"] - tp))
+            if d <= b["tol"] and (best is None or d < best[0]):
+                best = (d, e)
+        if best is not None and b["loaded"] != best[1]["chunk"]:
+            self.s.write_sink(best[1]["lat"], slot=1)
+            b["loaded"] = best[1]["chunk"]
+            b["reads"].append({"at_chunk": self.s.chunk_id, "from_chunk": best[1]["chunk"],
+                               "offset_deg": round(best[0], 1), "target_yaw": round(ty, 1)})
+        if b.get("gain") and not getattr(self, "ret", None):
+            self.s.tune["sink_gain"] = b["gain"] if best is not None else 1.0
+
+    def _bank_write(self, move):
+        b = getattr(self, "bank", None)
+        if move is not None:
+            self.pos[{"forward": 0, "back": 0, "strafe_left": 1, "strafe_right": 1}[move]] +=                 1 if move in ("forward", "strafe_right") else -1
+        if b is None:
+            return
+        e = {"chunk": self.s.chunk_id - 1, "yaw": (self.yaw + 180.0) % 360.0 - 180.0, "pitch": self.pitch,
+             "pos": tuple(self.pos), "lat": self.s.latents[-1].clone()}
+        # a newer observation of the same heading and place supersedes the old one
+        old = [v for v in b["views"] if v["pos"] == e["pos"] and abs(v["yaw"] - e["yaw"]) < 5 and
+               abs(v["pitch"] - e["pitch"]) < 5 and v["chunk"] >= 2 and v["chunk"] != b["loaded"]]
+        for v in old:
+            b["views"].remove(v)
+            b["superseded"] += 1
+        b["views"].append(e)
+
     # -- side memory: what to write when the camera comes back ---------------
     def _ret_update(self, yaw, pitch):
         """Set this chunk's return-register gain and sink gain from where the camera
@@ -208,6 +254,7 @@ class Episode:
         guide, reloc = None, None
         direction = int(np.sign(yaw)) if yaw else int(np.sign(pitch)) * 2
         self._ret_update(yaw, pitch)
+        self._bank_read(yaw, pitch)
         if move is not None:
             rel = [_translate(move, self.speed)] * CHUNK
         else:
@@ -319,6 +366,7 @@ class Episode:
                         f = (j + 1) / len(new)
                         self.mem.add(new[j], y0 + got[0] * f, p0 + got[1] * f,
                                      chunk=self.s.chunk_id - 1, direction=direction)
+        self._bank_write(move)
         if move is None and not facing_start(self.yaw, self.pitch):
             self.been_away = True
         self.records.append({"chunk": self.s.chunk_id - 1, "label": label,
@@ -675,6 +723,12 @@ class Episode:
             self.guide_via = self.cfg["guide_via"]
         if self.register:
             s.set_register(first_prompt, self.register["text"], self.register.get("gain", 1.0))
+        self.pos = [0, 0]
+        self.bank = None
+        if self.cfg.get("bank"):
+            bc = self.cfg["bank"]
+            self.bank = {"views": [], "tol": float(bc.get("tol", 12.0)), "min_age": int(bc.get("min_age", 5)),
+                         "gain": bc.get("gain"), "loaded": 1, "reads": [], "superseded": 0}
         self.ret = None
         rc = self.cfg.get("ret")
         if rc and not self.register and not (case.get("prompt") or "").lower().startswith("wait and observe"):
@@ -754,6 +808,9 @@ class Episode:
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
                 "cfg": self.cfg, "brief": self.brief,
+                "bank": None if not getattr(self, "bank", None) else {
+                    "views": len(self.bank["views"]), "superseded": self.bank["superseded"],
+                    "reads": self.bank["reads"]},
                 "ret": None if not getattr(self, "ret", None) else {
                     "text": self.ret["text"], "info": self.ret["info"], "gain": self.ret["gain"],
                     "sink": self.ret["sink"], "chunks_back": sum(1 for t in self.ret["trace"] if t["back"]),
