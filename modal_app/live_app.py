@@ -36,6 +36,7 @@ image = (
     .add_local_dir(os.path.join(ROOT, "tools"), remote_path="/wh/tools")
 )
 web_image = (modal.Image.debian_slim(python_version="3.11")
+             .apt_install("ffmpeg")
              .pip_install("fastapi[standard]", "pillow", "python-multipart", "requests")
              .add_local_file(os.path.join(ROOT, "modal_app", "live_page.html"), "/wh/live_page.html"))
 
@@ -80,8 +81,19 @@ class Live:
     def run(self, job: dict):
         import jobs
         runs.reload()
-        jobs.run_job(self.stepper, "lingbot2_14b", dict(job, out=f"{R}/{job['out']}"), DATA,
-                     log=lambda m: print("[live]", m, flush=True), after_each=runs.commit)
+        import glob
+        import subprocess
+        out = f"{R}/{job['out']}"
+        jobs.run_job(self.stepper, "lingbot2_14b", dict(job, out=out), DATA,
+                     log=lambda m: print("[live]", m, flush=True))
+        # a small copy the browser can start playing at once (index at the front of the file)
+        for v in glob.glob(f"{out}/*/*/video.mp4"):
+            w = v.replace("video.mp4", "web.mp4")
+            if not os.path.exists(w):
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", v, "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                                "-crf", "24", "-preset", "veryfast", "-movflags", "+faststart", w + ".tmp.mp4"], check=False)
+                if os.path.exists(w + ".tmp.mp4"):
+                    os.replace(w + ".tmp.mp4", w)
         runs.commit()
         return "done"
 
@@ -100,7 +112,32 @@ def web():
     from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
     from PIL import Image
 
+    import shutil
+    import threading
+
     api = FastAPI()
+    lock = threading.Lock()
+
+    def fresh():
+        """Pick up what the GPU containers wrote. Never fails a request: a reload can be refused while a file is open."""
+        with lock:
+            try:
+                runs.reload()
+            except Exception:
+                pass
+
+    def local_copy(src, name):
+        """Serve from the container's own disk, so no file on the volume stays open while it is reloaded."""
+        dst = f"/tmp/live/{name}"
+        if not os.path.exists(dst):
+            fresh()
+            if not os.path.exists(src):
+                return None
+            os.makedirs("/tmp/live", exist_ok=True)
+            with lock:
+                shutil.copyfile(src, dst + ".part")
+                os.replace(dst + ".part", dst)
+        return dst
     code_ok = lambda c: bool(os.environ.get("LIVE_CODE")) and c == os.environ["LIVE_CODE"]    # noqa: E731
 
     def caption(im):
@@ -172,7 +209,7 @@ def web():
 
     @api.get("/api/status/{rid}")
     def status(rid: str):
-        runs.reload()
+        fresh()
         d = f"{R}/live/{rid}"
         if not os.path.exists(f"{d}/meta.json"):
             raise HTTPException(404, "no such run")
@@ -180,7 +217,8 @@ def web():
         out = {"id": rid, "ask": meta["ask"], "caption": meta["caption"], "seconds": round(time.time() - meta["t0"]), "arms": {}}
         for tag in VARIANTS:
             cd = f"{d}/lingbot2_14b_open_{tag}/{meta['case']}"
-            arm = {"ready": os.path.exists(f"{cd}/video.mp4") and os.path.exists(f"{cd}/result.json")}
+            # ready once the small streamable copy exists; if it never appears, fall back to the full clip
+            arm = {"ready": os.path.exists(f"{cd}/result.json") and os.path.exists(f"{cd}/video.mp4")}
             if arm["ready"]:
                 res = json.load(open(f"{cd}/result.json"))
                 reads = (res.get("bank") or {}).get("reads") or []
@@ -202,18 +240,31 @@ def web():
     def video(rid: str, tag: str):
         if tag not in VARIANTS or not rid.isalnum():
             raise HTTPException(400, "bad request")
-        runs.reload()
-        meta = json.load(open(f"{R}/live/{rid}/meta.json"))
-        p = f"{R}/live/{rid}/lingbot2_14b_open_{tag}/{meta['case']}/video.mp4"
-        if not os.path.exists(p):
-            raise HTTPException(404, "not ready")
-        return FileResponse(p, media_type="video/mp4")
+        d = f"{R}/live/{rid}/lingbot2_14b_open_{tag}/LIVE_{rid}"
+        small = f"/tmp/live/{rid}_{tag}_small.mp4"
+        p = small if os.path.exists(small) else local_copy(f"{d}/web.mp4", f"{rid}_{tag}.mp4")
+        if not p:
+            full = local_copy(f"{d}/video.mp4", f"{rid}_{tag}_full.mp4")
+            if not full:
+                raise HTTPException(404, "not ready")
+            # make the small streamable copy here if the GPU side did not (index at the front, a tenth of the size)
+            import subprocess
+            with lock:
+                if not os.path.exists(small):
+                    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", full, "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                                    "-crf", "24", "-preset", "veryfast", "-movflags", "+faststart", small + ".part.mp4"], check=False)
+                    if os.path.exists(small + ".part.mp4"):
+                        os.replace(small + ".part.mp4", small)
+            p = small if os.path.exists(small) else full
+        return FileResponse(p, media_type="video/mp4", headers={"Cache-Control": "public, max-age=3600"})
 
     @api.get("/api/input/{rid}")
     def inp(rid: str):
         if not rid.isalnum():
             raise HTTPException(400, "bad request")
-        runs.reload()
-        return FileResponse(f"{R}/live/{rid}/input.jpg", media_type="image/jpeg")
+        p = local_copy(f"{R}/live/{rid}/input.jpg", f"{rid}_input.jpg")
+        if not p:
+            raise HTTPException(404, "no such run")
+        return FileResponse(p, media_type="image/jpeg")
 
     return api

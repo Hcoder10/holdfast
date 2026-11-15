@@ -107,7 +107,8 @@ async function poll(id) {
     done++;
     if (!vids[t]) {
       const v = document.createElement("video");
-      v.src = "api/video/" + id + "/" + t; v.muted = true; v.playsInline = true; v.controls = true; v.loop = true;
+      v.src = "api/video/" + id + "/" + t; v.muted = true; v.playsInline = true; v.controls = true; v.loop = true; v.preload = "auto";
+      v.onerror = () => { $("n-" + t).textContent = "The clip did not load; retrying ..."; setTimeout(() => { v.src = "api/video/" + id + "/" + t + "?r=" + Date.now(); v.load(); }, 2500); };
       $("f-" + t).innerHTML = ""; $("f-" + t).appendChild(v); vids[t] = v;
       const w = (a.writes || []).length;
       $("n-" + t).textContent = t === "holdfast"
