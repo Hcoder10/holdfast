@@ -306,3 +306,22 @@ on chunks commanded to translate. Frames, orchestrator's reading: IF011 (Sphinx)
 arms); GC026 (shopfront) no advance at the moderate setting, and at the strong one a late scene change, not a
 walk; OE032 the same pattern. Rejected: the model does not take motion from warped noise here. Walking forward
 from a standing start on these scenes remains unsolved.
+
+### Object ledger (sweep24, 09:30): region write-back plus Exa sentence, judged
+
+Same 11 turn-and-return cases as sweep22, two Gemini passes. Ledger arm = shadow world, with the write-back limited
+to the regions the ledger calls static and the Exa-derived sentence ramped in on return.
+
+| arm | mean of 11 | geometry (4) | out-of-sight (7) |
+|---|---|---|---|
+| base | 1.62 | 1.95 | 1.43 |
+| shadow world, whole-frame write-back | 1.88 | 2.68 | 1.43 |
+| + object ledger | 1.55 | 2.25 | 1.14 |
+
+Ledger minus shadow: -0.34 per case (1 better, 5 worse). Three of the four geometry cases had an all-static ledger and
+so ran the same program as the shadow arm, yet differ by up to 1.3 points, which is the size of rerun-plus-judge
+noise on single cases; the result is "no evidence of a gain", not a measured harm. The mechanics worked: ledgers of
+4-6 objects per scene, 0.36-0.90 of the frame pinned, one arrival per case.
+The critic's per-object check is not usable as a signal: it reported every object "same" or "changed plausibly" and
+the view "returned" on all 11 cases, including seven the judge scored 1.0. A second attempt driven by it would have
+nothing to act on, so that step was not run.
