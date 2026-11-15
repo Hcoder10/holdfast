@@ -708,7 +708,7 @@ class Episode:
         s = self.s
         self.caption = case["image_caption"]
         self.plan = None
-        if self.cfg.get("planner"):
+        if "planner" in self.cfg and self.cfg["planner"] is not False:   # {} means "on with defaults"
             # launch-time decision model: a small LLM picks the state program for this task and scene
             import planner
             pc = self.cfg["planner"] if isinstance(self.cfg["planner"], dict) else {}

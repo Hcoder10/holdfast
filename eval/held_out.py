@@ -36,10 +36,12 @@ ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
         "sw21": {"baseline": "sweep21:lingbot2_14b_open_base", "alive": "sweep21:lingbot2_14b_open_alive03",
                  "final": "sweep21:lingbot2_14b_open_planner"},
         # the planner-chosen program on the 95 held-out cases, against the arms already judged there
-        "v2": {"baseline": "base95", "final": "final2"}}[SET]
+        "v2": {"baseline": "base95", "final": "final2"},
+        # the planner arm of the 21-case test, run again after a bug left it switched off the first time
+        "sw21b": {"final": "sweep21b:lingbot2_14b_open_planner"}}[SET]
 MODE = "lingbot2_14b_open"
 INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
-OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2"}[SET]
+OUTNAME = {"held": "held_out", "dev": "dev_half", "sw21": "sweep21", "v2": "held_out_v2", "sw21b": "sweep21b"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 
@@ -83,7 +85,7 @@ def judge(p):
     out = RUNS / f"gem_{SET}_p{p}"
     for workers in ("10", "4"):       # the second sweep picks up anything that failed
         r = sh([sys.executable, "-I", "-X", "utf8", "eval/openrouter_judge.py", "--inputs", str(BLIND), "--out",
-                str(out), "--transport", "gemini", "--workers", workers], 4 * 3600)
+                str(out), "--transport", os.environ.get("WH_TRANSPORT", "gemini"), "--workers", workers], 4 * 3600)
         print(r[-400:])
     cost = sum(json.loads(line).get("cost") or 0 for line in open(out / "cost.jsonl", encoding="utf8"))
     print(f"pass {p}: {len(list(out.glob('*/*/score_result.json')))} scored, ${cost:.2f}")
