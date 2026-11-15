@@ -153,6 +153,40 @@ class LingBotStepper:
             dtype=p.pipe_dtype, device=self.device)
         self.cross_first = True
 
+    def _flow_noise(self, noise, rel, nf):
+        """Motion written into the starting noise. When a chunk is commanded to translate, each latent
+        frame's starting noise is made partly a warped copy of the frame before it (zoom for forward or
+        back, shift for a strafe), so the noise itself already carries the optical flow of the commanded
+        move. A still or turning chunk gets ordinary independent noise. {"zoom": per-frame zoom for a
+        full-speed forward step, "shift": per-frame shift as a fraction of the width for a strafe,
+        "rho": how much of each frame's noise is the warped copy}."""
+        t = np.asarray(rel)[:, :3, 3]
+        fwd, right = float(t[:, 2].mean()), float(t[:, 0].mean())
+        prev = getattr(self, "flow_prev", None)
+        if abs(fwd) < 1e-3 and abs(right) < 1e-3:
+            self.flow_prev = None
+            return noise
+        rho = float(nf.get("rho", 0.7))
+        zoom = 1.0 + float(nf.get("zoom", 0.03)) * fwd
+        shift = -2.0 * float(nf.get("shift", 0.03)) * right     # camera moves right, content moves left
+        theta = torch.tensor([[1.0 / zoom, 0.0, -shift], [0.0, 1.0 / zoom, 0.0]], device=noise.device,
+                             dtype=noise.dtype)[None]
+        grid = torch.nn.functional.affine_grid(theta, (1, noise.shape[0], noise.shape[2], noise.shape[3]),
+                                               align_corners=False)
+        out, last = [], prev
+        for j in range(noise.shape[1]):
+            cur = noise[:, j]
+            if last is not None:
+                w = torch.nn.functional.grid_sample(last[None], grid, mode="nearest", padding_mode="reflection",
+                                                    align_corners=False)[0]
+                cur = rho * w + (1 - rho * rho) ** 0.5 * cur
+                cur = (cur - cur.mean()) / (cur.std() + 1e-6)
+            out.append(cur)
+            last = cur
+        self.flow_prev = last
+        self.flow_chunks = getattr(self, "flow_chunks", 0) + 1
+        return torch.stack(out, dim=1)
+
     def set_register(self, base_prompt, text, gain=1.0):
         """A text register: `text` is encoded on its own and placed after `base_prompt`
         in the cross-attention context, and `register_gain` (changeable at any chunk)
@@ -204,6 +238,7 @@ class LingBotStepper:
         #   sink_gain     self-attention gain on the episode's first frames
         #   noise_rho     correlation of each chunk's starting noise with the previous chunk's
         self.tune = {}
+        self.flow_prev, self.flow_chunks = None, 0
         self.mu0 = None
         self.last_noise = None
         p = self.pipe
@@ -492,6 +527,9 @@ class LingBotStepper:
                 y[4:, key[1]] = lat
             kwargs["y"] = [y]
             self.cond_writes = getattr(self, "cond_writes", 0) + 1
+        nf = self.tune.get("noise_flow")
+        if nf:
+            latent = self._flow_noise(latent, rel, nf)
         rho = float(self.tune.get("noise_rho", 0.0) or 0.0)
         if rho and self.last_noise is not None:
             latent = rho * self.last_noise + (1 - rho * rho) ** 0.5 * latent
