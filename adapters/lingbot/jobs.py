@@ -50,8 +50,11 @@ def run_job(stepper, model, job, data, log=print, after_each=None):
     for task_id in job["cases"]:
         split, case = find_case(data, task_id)
         img = Image.open(image_for(data, split, case))
-        for mode in job["modes"]:
-            d = os.path.join(job["out"], f"{model}_{mode}{job.get('tag', '')}", task_id)
+        # "variants": {tag: cfg} runs several configurations in one job (one model load);
+        # each lands in its own folder <model>_<mode>_<tag>.
+        variants = job.get("variants") or {"": job.get("cfg")}
+        for mode, (vtag, vcfg) in ((m, v) for m in job["modes"] for v in variants.items()):
+            d = os.path.join(job["out"], f"{model}_{mode}{'_' + vtag if vtag else ''}{job.get('tag', '')}", task_id)
             if os.path.exists(os.path.join(d, "result.json")):
                 continue
             os.makedirs(d, exist_ok=True)
@@ -67,7 +70,7 @@ def run_job(stepper, model, job, data, log=print, after_each=None):
                     pl = player.Player()
                 ep = episode.Episode(stepper, mode=mode, wait_chunks=job.get("wait_chunks", 40),
                                      log=lambda *x: None, timeline=tl, player=pl,
-                                     cfg=job.get("cfg"))
+                                     cfg=vcfg)
                 res = ep.run(case, img, seed=job.get("seed", 0))
             except Exception as e:  # one bad case must not sink the shard
                 import traceback
