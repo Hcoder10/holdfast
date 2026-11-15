@@ -298,3 +298,11 @@ passes; the other 49 cases reuse the pre-registered run. Overall 2.40 (GC 2.82, 
 Against unmodified +0.30 (95% interval +0.02 to +0.60); against the pre-registered program +0.09 (-0.11 to +0.28),
 geometry +0.34, out-of-sight -0.02. On the 46 regenerated cases: 2.45 vs 2.26 (pre-registered), 2.38 (objective
 only), 2.15 (unmodified). Gate, geometry: 16 pass / 7 partial / 1 fail; out-of-sight: 14 / 1 / 6.
+
+### Noise flow (sweep25, 09:15): commanded translation written into the starting noise
+
+Each latent frame's starting noise made partly (rho 0.7 or 0.85) a zoomed or shifted copy of the previous frame's,
+on chunks commanded to translate. Frames, orchestrator's reading: IF011 (Sphinx) unchanged (motion 3.0 in all
+arms); GC026 (shopfront) no advance at the moderate setting, and at the strong one a late scene change, not a
+walk; OE032 the same pattern. Rejected: the model does not take motion from warped noise here. Walking forward
+from a standing start on these scenes remains unsolved.
