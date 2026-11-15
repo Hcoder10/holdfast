@@ -36,18 +36,50 @@ ap.add_argument("--only", default="")
 ap.add_argument("--workers", type=int, default=4)
 ap.add_argument("--model", default="google/gemini-3.1-pro-preview")
 ap.add_argument("--max_tokens", type=int, default=12000)
+ap.add_argument("--transport", default="openrouter", choices=["openrouter", "gemini"],
+                help="gemini: Google's API directly (GEMINI_API_KEY); same model, prompts, images and settings")
 a = ap.parse_args()
 
 
 def key():
-    k = os.environ.get("OPENROUTER_API_KEY")
+    name = "GEMINI_API_KEY" if a.transport == "gemini" else "OPENROUTER_API_KEY"
+    k = os.environ.get(name)
     if not k and (ROOT / ".env").exists():
         for line in (ROOT / ".env").read_text(encoding="utf8").splitlines():
-            if line.startswith("OPENROUTER_API_KEY="):
+            if line.startswith(name + "="):
                 k = line.split("=", 1)[1].strip()
     if not k:
-        raise SystemExit("OPENROUTER_API_KEY is not set")
+        raise SystemExit(name + " is not set")
     return k
+
+
+# Gemini 3.1 Pro list price per million tokens (input up to 200k / output incl. thinking)
+GEMINI_PRICE = (2.0, 12.0)
+
+
+def gemini_call(parts):
+    """The same message through Google's generateContent. Returns (text, usage dict)."""
+    gp = []
+    for q in parts:
+        if q["type"] == "text":
+            gp.append({"text": q["text"]})
+        else:
+            gp.append({"inline_data": {"mime_type": "image/jpeg", "data": q["image_url"]["url"].split(",", 1)[1]}})
+    model = a.model.split("/")[-1]
+    r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                      headers={"x-goog-api-key": KEY, "Content-Type": "application/json"}, timeout=600,
+                      json={"contents": [{"role": "user", "parts": gp}],
+                            "generationConfig": {"temperature": 0.1, "maxOutputTokens": a.max_tokens,
+                                                 "responseMimeType": "application/json"}})
+    d = r.json()
+    if "candidates" not in d:
+        raise RuntimeError(json.dumps(d)[:400])
+    text = "".join(x.get("text", "") for x in d["candidates"][0].get("content", {}).get("parts", [])
+                   if not x.get("thought"))
+    u = d.get("usageMetadata", {})
+    pin, pout = u.get("promptTokenCount", 0), u.get("candidatesTokenCount", 0) + u.get("thoughtsTokenCount", 0)
+    return text, {"prompt_tokens": pin, "completion_tokens": pout,
+                  "cost": round(pin * GEMINI_PRICE[0] / 1e6 + pout * GEMINI_PRICE[1] / 1e6, 5)}
 
 
 KEY = key()
@@ -93,15 +125,19 @@ def one(job):
     err = ""
     for attempt in range(3):
         try:
-            r = requests.post(URL, headers={"Authorization": "Bearer " + KEY}, json=body, timeout=600)
-            d = r.json()
-            if "choices" not in d:
-                err = json.dumps(d)[:500]
-                time.sleep(4)
-                continue
-            result = parse_json(d["choices"][0]["message"]["content"])
+            if a.transport == "gemini":
+                text, u = gemini_call(body["messages"][0]["content"])
+                result = parse_json(text)
+            else:
+                r = requests.post(URL, headers={"Authorization": "Bearer " + KEY}, json=body, timeout=600)
+                d = r.json()
+                if "choices" not in d:
+                    err = json.dumps(d)[:500]
+                    time.sleep(4)
+                    continue
+                result = parse_json(d["choices"][0]["message"]["content"])
+                u = d.get("usage", {})
             target.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf8")
-            u = d.get("usage", {})
             with open(a.out / "cost.jsonl", "a", encoding="utf8") as f:
                 f.write(json.dumps({"system": system, "task": case.name, "mode": mode, "model": a.model,
                                     "prompt_tokens": u.get("prompt_tokens"),
