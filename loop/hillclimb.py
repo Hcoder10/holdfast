@@ -41,6 +41,7 @@ from metrics.aggregate import OE_INSIGHT_TASKS, normalized_score  # noqa: E402
 KNOBS = {
     "mode": ["open", "memory", "memory+shadow"],     # rotation memory; shadow = forked rollout keeps the start view running
     "brief": ["none", "dynamics", "llm"],            # step-0 motion sentence (dynamics = Exa-grounded, llm = no web)
+    "prompt": ["caption", "caption+objective"],      # text given to the model; PlayWorld's own adapter passes the objective
     "guide_hard": [True, False],                     # remembered latents replace the final prediction, or only steer it
     "guide_from": [1, 2],                            # sampling step from which remembered latents are imposed
     "erode": [2, 5, 8],                              # free band (latent cells) between remembered and new content
@@ -49,7 +50,7 @@ KNOBS = {
     "settle": [True, False],                         # finish and hold exactly on the start view when back at it
     "speed": [0.7, 1.0],                             # translation speed (model units)
 }
-DEFAULT = {"mode": "open", "brief": "none", "guide_hard": True, "guide_from": 1, "erode": 5,
+DEFAULT = {"mode": "open", "brief": "none", "prompt": "caption", "guide_hard": True, "guide_from": 1, "erode": 5,
            "feather": 2, "max_yaw": 30.0, "settle": True, "speed": 1.0}
 PER_DIM = 6
 OUT = ROOT / "runs" / "hillclimb"

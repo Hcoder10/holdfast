@@ -533,6 +533,14 @@ class Episode:
             self.guide_from = int(self.cfg["guide_from"])
         if "speed" in self.cfg:
             self.speed = float(self.cfg["speed"])
+        if self.cfg.get("prompt", "caption") == "caption+objective":
+            # PlayWorld's released local adapter gives the model the objective as its
+            # text; here it is appended to the caption. A bare "wait and observe" adds
+            # nothing and is left out.
+            obj = (case.get("prompt") or "").strip()
+            if obj and not obj.lower().startswith("wait and observe"):
+                case = dict(case, image_caption=case["image_caption"].rstrip().rstrip(".") + ". " + obj)
+                self.caption = case["image_caption"]
         if self.cfg.get("brief", "none") != "none":
             import brief
             self.brief = brief.make(case, image, use_web=self.cfg.get("brief") != "llm")
