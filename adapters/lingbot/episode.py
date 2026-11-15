@@ -332,9 +332,11 @@ class Episode:
         else:
             self._step(f"agent {word}", move=kind)
 
-    def _consult(self, case, allow_next):
+    def _consult(self, case, allow_next, next_kind=None):
         """Let the agent player extend or correct after a segment. Returns True if it
-        says the whole goal is complete."""
+        says the whole goal is complete. If the agent asks for the action the next
+        preset segment is about to perform anyway, that is a NEXT, not an extra chunk
+        (otherwise the turn back would be made twice)."""
         for _ in range(MAX_AGENT_EXTRA):
             if self.s.chunk_id >= MAX_STEPS:
                 return False
@@ -342,7 +344,7 @@ class Episode:
                                       self.history, self.s.chunk_id, MAX_STEPS, allow_next)
             if word == "END":
                 return True
-            if word == "NEXT":
+            if word == "NEXT" or TO_KIND.get(word) == next_kind:
                 return False
             self._agent_chunk(word)
         return False
@@ -392,7 +394,7 @@ class Episode:
         plan = parse_actions(case["action"])
         net_yaw = net_pitch = 0.0
         moved = False
-        for kind, n in plan:
+        for seg_i, (kind, n) in enumerate(plan):
             if kind in ("left", "right"):
                 tgt = (1 if kind == "right" else -1) * n * YAW_PER_TOKEN
                 if abs(tgt) > 360.0 and "360" in case.get("prompt", ""):
@@ -414,7 +416,9 @@ class Episode:
                 for _ in range(n):
                     self._step(kind, move=kind)
             if self.player is not None and not (len(plan) == 1 and kind == "wait"):
-                if self._consult(case, allow_next=(kind, n) != plan[-1]):
+                last = seg_i == len(plan) - 1
+                if self._consult(case, allow_next=not last,
+                                 next_kind=None if last else plan[seg_i + 1][0]):
                     break
         returns_to_start = (not moved and abs(net_yaw) % 360 < 1e-6 and abs(net_pitch) < 1e-6
                             and any(k in ("left", "right", "up", "down") for k, _ in plan))
