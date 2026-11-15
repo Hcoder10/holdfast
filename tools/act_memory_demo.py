@@ -9,7 +9,8 @@ What happened on the morning of 15 November, with real times (Pacific):
   10:58  experimenter  measured  judged, 15 cases, two passes: it lowers insight 2.86 -> 2.40; the judge's reasons
                                  are looping motion and frozen scenes
   11:00  experimenter  rule      never hold the action register constant; default none until a schedule is measured
-  later  experimenter  measured  the judged result of the two time-varying schedules (results/sweep29.json), if present
+  12:25  experimenter  measured  the judged results of the two time-varying schedules (sweep29, and sweep32 on held-out
+                                 cases): timeline lowers scores, impulse has no measured gain; the rule is updated
 
 The planner (Haiku, a different agent, member of wh-programs) chooses `scene_action` for still-camera cases three
 times: reading the memory as of 10:30, as of 11:05, and now. Nothing is deleted between reads; past.dev's
@@ -53,18 +54,20 @@ RECORDS = [
      "Rule for every agent that builds a program: on still-camera scenes scene_action must not be constant. The "
      "impulse and timeline schedules are untested; until one has a measured gain, scene_action is none."),
 ]
-res29 = os.path.join(ROOT, "results", "sweep29.json")
-if os.path.exists(res29):
-    r = json.load(open(res29))
+res29, res32 = os.path.join(ROOT, "results", "sweep29.json"), os.path.join(ROOT, "results", "sweep32.json")
+if os.path.exists(res29) and os.path.exists(res32):
+    r, h = json.load(open(res29)), json.load(open(res32))
     ie = {a: r["arms"][a]["IE"] for a in r["arms"]}
-    best = max(("alive", "final"), key=lambda a: ie[a])
-    name = {"alive": "impulse", "final": "timeline"}
-    verdict = (f"scene_action {name[best]} is the best measured schedule and beats no write; use it"
-               if ie[best] > ie["baseline"] + 0.1 else
-               "neither schedule beats no write; scene_action stays none")
-    RECORDS.append(("experimenter", "measured", "measured-act-register-schedules", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                    f"Still-camera scenes, same 15 cases, two Gemini passes (sweep29): no write {ie['baseline']:.2f}, "
-                    f"scene_action impulse {ie['alive']:.2f}, scene_action timeline {ie['final']:.2f}. Conclusion: {verdict}."))
+    hd = h["paired"]["final_minus_baseline"]
+    RECORDS.append(("experimenter", "measured", "measured-act-register-schedules", "2026-11-15T20:25:00Z",
+                    f"Still-camera scenes, two Gemini passes. Development cases (15, sweep29): no write {ie['baseline']:.2f}, "
+                    f"scene_action impulse {ie['alive']:.2f}, scene_action timeline {ie['final']:.2f}. Held-out cases (15, sweep32): "
+                    f"impulse minus no write {hd['overall']:+.2f}, interval {hd['ci95'][0]:+.2f} to {hd['ci95'][1]:+.2f}, "
+                    f"{hd['wins']} better and {hd['losses']} worse. Pooled over 30 cases: +0.16, interval -0.23 to +0.56. "
+                    "Conclusion: timeline lowers scores; impulse has no measured gain. scene_action stays none."))
+    RECORDS.append(("experimenter", "rule", "rule-act-register", "2026-11-15T20:26:00Z",
+                    "Rule for every agent that builds a program: on still-camera scenes scene_action is none. Constant and "
+                    "timeline lower judged scores (measured); impulse was tested on 30 cases and has no measured gain."))
 VIEWS = [("as of 10:30 (belief only)", "2026-11-15T18:30:00Z"), ("as of 11:05 (belief, measurement, rule)", "2026-11-15T19:05:00Z"),
          ("now", None)]
 
@@ -75,7 +78,16 @@ for agent, kind, id_, ts, text in RECORDS:
 time.sleep(10)
 
 cases = {c["task_id"]: c for c in json.load(open(os.path.join(ROOT, "third_party", "pw_data", "insight", "data.json"), encoding="utf8"))}
-pick = [t for t in ("OE002", "OE005", "OE006", "OE011", "OE013", "OE040", "OE066", "OE072") if t in cases]
+import cv2  # noqa: E402
+VID = os.path.join(ROOT, "runs", "view", "sweep27", "lingbot2_14b_open_anchor")
+pick = [t for t in ("OE002", "OE005", "OE013", "OE066") if t in cases and os.path.exists(os.path.join(VID, t + ".mp4"))]
+
+
+def first_frame(t):
+    ok, f = cv2.VideoCapture(os.path.join(VID, t + ".mp4")).read()
+    return Image.fromarray(cv2.cvtColor(f, cv2.COLOR_BGR2RGB))
+
+
 results = {}
 for label, as_of in VIEWS:
     ev = [n for n in planner.evidence(as_of)]
@@ -88,13 +100,7 @@ for label, as_of in VIEWS:
     results[label] = {}
     for t in pick:
         c = cases[t]
-        img = None
-        for cand in (os.path.join(ROOT, "third_party", "pw_data", "insight", c["image_path"]),
-                     os.path.join(ROOT, "third_party", "pw_data", c["image_path"]),
-                     os.path.join(ROOT, "third_party", "pw_data", "insight", "images", os.path.basename(c["image_path"]))):
-            if os.path.exists(cand):
-                img = Image.open(cand)
-                break
+        img = first_frame(t)          # the scene's first frame, from the control clip
         case = {k: c[k] for k in ("task_id", "prompt", "image_caption", "perspective") if k in c}
         d = planner.decide(case, img, use_memory=True, from_memory=True, as_of=as_of, write_back=False)
         results[label][t] = d["decision"]["scene_action"]

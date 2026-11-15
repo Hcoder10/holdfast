@@ -217,6 +217,31 @@ the unmodified run when its patches made things worse. The scores are its own cr
 also changed several controls at once when asked for one, and on the strafe case repeated a patch that had not
 helped. None of this has been scored by the benchmark judge.
 
+### Landmarks: several views kept, written back on arrival (post hoc, small test)
+
+The shadow world keeps the one view the camera just turned away from. Landmarks keep every view where the camera
+stopped or changed what it was doing (the start, the end of each walk or turn, each pause) as the latent of that
+moment with its heading and position. When the camera is about to arrive back at one, the arriving frame is
+pinned to it through the same image-condition input. This covers what the shadow world cannot: coming back by
+walking or sliding, and returning to a place visited earlier that is not the one just left.
+
+<!-- LANDMARKS -->
+Ten development cases that return to an earlier position, shadow world alone against shadow world plus
+landmarks, both arms generated together, blinded together, judged twice (`results/sweep31_full.json`):
+
+| 10 cases | Geometry (7) | Out-of-sight (3) | Paired difference |
+|---|---|---|---|
+| Shadow world | 1.77 | 1.00 | |
+| Shadow world + landmarks | 2.19 | 2.21 | **+0.81**, 95% interval +0.04 to +1.70 (5 better, 2 worse) |
+
+The first test of this write (12 cases) showed nothing, and looking at why found two bugs: the trigger counted
+the agent player's top-up steps, so "back at the landmark" was never detected in 6 of 12 cases; and the start
+view was pinned as the VAE's first latent (one frame) in a slot that holds four, which decoded washed out. The
+table above is the rerun with both fixed. Ten cases, a noisy judge (the two passes differ by 0.81 per video
+here) and a design chosen after seeing failures: this is a lead, not an established gain. The strafe-out-and-back
+case went from 1.0 and 1.0 to 4.0 and 4.0, and walk in, out, in again improved in all three runs it was part of.
+<!-- /LANDMARKS -->
+
 ### Reading the state
 
 `loop/read_probes.py` trains linear probes on recorded residual activations (347 episodes, 80 cases, eight
@@ -250,7 +275,7 @@ Each of these was built, run and looked at; details and sweep names are in `resu
 | Steering only the unseen copy with the Exa sentence (shadow world) | 2.16 vs 2.05 on 14 cases, interval -0.77 to +0.95: large swings both ways, not distinguishable from no effect |
 | Exa-derived action sentence in the register for still-camera scenes, constant at gain 8 | Insight 2.40 vs 2.86 on 15 cases, two passes. The judge's reasons: the subject repeats one motion with no accumulated change, or the scene sits in the described state. A sentence that stays on is re-satisfied every chunk |
 | The same as a three-stage timeline (early, middle, late), always on at gain 4 | 2.14 vs 2.51 on the same 15 cases |
-| Landmarks: several significant views kept and pinned on arrival, on top of the shadow world | First test, 12 cases: 2.12 vs 2.33 geometry, interval -0.48 to +0.12. Two bugs found afterwards: the trigger counted the agent player's top-up steps, so it never fired in 6 of 12 cases, and the start view was pinned as the wrong kind of latent and decoded washed out. With both fixed, only 4 paired cases were judged before the deadline (+0.32, interval -0.25 to +1.30). The one case built for it (walk in, out, in) improved in both runs (1.0 and 5.0 to 5.0 and 4.0; 2.4 and 1.0 to 4.0 and 3.6). Not established |
+| Exa-derived action sentence as an impulse (gain 8 for the first five chunks, then released) | Development cases 2.75 vs 2.51 (+0.25, interval -0.32 to +0.82); held-out cases 1.90 vs 1.83 (+0.07, -0.41 to +0.66); pooled over 30 cases +0.16 (-0.23 to +0.56), 11 better and 10 worse. Releasing the write removes the harm of holding it on; no measured gain |
 | Predicting the judge from recorded activations and latent reads | At or below chance at picking the better of two reruns (0.41-0.44 over 238 pairs), although a perfect picker would gain +0.92 |
 
 ## Where it still breaks
@@ -361,6 +386,17 @@ that worked.
   that role, not by a separate process.
 - The agents are roles within one program run, sharing one API key; identity is declared by the
   caller, not authenticated per agent.
+
+<!-- ACT-DEMO -->
+**A third demo, on a write into cross-attention** (`tools/act_memory_demo.py`, `results/pastdev_act_demo.txt`).
+On the last morning the proposer recorded a belief (10:10): an Exa-derived action sentence held in the register
+at gain 8 will make still-camera subjects act. The experimenter recorded the judged result (10:58): it lowers
+insight from 2.86 to 2.40, with the judge's reasons. A rule followed (11:00), then the results for two
+time-varying schedules (12:25). The planner, a different agent, chooses `scene_action` for four still-camera
+cases reading the memory as of three times: with only the belief it chooses the constant write on 4 of 4; after
+the measurement and rule, none on 4 of 4; and the same now. That choice is the `act_register` entry of the
+episode's state program, so what the memory holds decides what is written into the model's cross-attention.
+<!-- /ACT-DEMO -->
 
 ## Exa challenge
 

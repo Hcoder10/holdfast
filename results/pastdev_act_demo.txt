@@ -1,0 +1,49 @@
+== records published to wh-programs (author, kind, time) ==
+2026-11-15T18:10:00Z  proposer     belief    belief-act-register-constant  [completed]
+2026-11-15T18:58:00Z  experimenter measured  measured-act-register-constant  [completed]
+2026-11-15T19:00:00Z  experimenter rule      rule-act-register  [queued]
+2026-11-15T20:25:00Z  experimenter measured  measured-act-register-schedules  [completed]
+2026-11-15T20:26:00Z  experimenter rule      rule-act-register  [queued]
+
+== what the planner reads about still-camera scenes, as of 10:30 (belief only) ==
+  2026-11-15T18:10:00Z  belief    by proposer     supersededAt=None  source=belief-act-register-constant
+      Still-camera scenes ('wait and observe'): writing an Exa-derived action sentence into the cross-attention register at gain 8 for the whole episode (scene_action constant) will make subjects act and ra
+
+== planner decisions, as of 10:30 (belief only) ==
+  OE002  scene_action constant  -> act_register {"gain": 8} | action_register must be 0 for first-person viewpoint (RULE); alive must be 0 until measured gain shown (RULE overrides belief); an
+  OE005  scene_action constant  -> act_register {"gain": 8} | action_register must be 0 for first-person viewpoint (RULE 2026-11-15T08:50:00Z); alive must be 0 per the updated rule (2026-11-15
+  OE013  scene_action constant  -> act_register {"gain": 8} | First-person viewpoint requires action_register=0 by rule; alive=0 per measured rule override; anchor=0.5 per measured benchmark; 
+  OE066  scene_action constant  -> act_register {"gain": 8} | First-person viewpoint requires action_register 0 by rule; alive must be 0 until proven; anchor 0.5 measured best for wait-and-obs
+
+== what the planner reads about still-camera scenes, as of 11:05 (belief, measurement, rule) ==
+  2026-11-15T18:10:00Z  belief    by proposer     supersededAt=None  source=belief-act-register-constant
+      Still-camera scenes ('wait and observe'): writing an Exa-derived action sentence into the cross-attention register at gain 8 for the whole episode (scene_action constant) will make subjects act and ra
+  2026-11-15T18:58:00Z  measured  by experimenter supersededAt=None  source=measured-act-register-constant
+      Still-camera scenes: scene_action constant (action register at gain 8 all episode) LOWERS judged insight, 2.86 -> 2.40 over 15 development cases, two Gemini passes (sweep27). Judge reasons: the subjec
+
+== planner decisions, as of 11:05 (belief, measurement, rule) ==
+  OE002  scene_action none      -> act_register null | First-person viewpoint requires action_register 0 (RULE); alive must stay 0 pending measured gains (RULE); anchor 0.5 improves wai
+  OE005  scene_action none      -> act_register null | First-person viewpoint requires action_register 0 by rule; alive must stay 0 until judged gains appear (measured rule overrides be
+  OE013  scene_action none      -> act_register null | First-person viewpoint requires action_register 0 by rule; alive 0 by rule (no measured gain shown); anchor 0.5 measured best for 
+  OE066  scene_action none      -> act_register null | First-person viewpoint requires action_register=0 per rule; alive=0 per measured evidence that it lowers scores; anchor=0.5 per me
+
+== what the planner reads about still-camera scenes, now ==
+  2026-11-15T18:10:00Z  belief    by proposer     supersededAt=None  source=belief-act-register-constant
+      Still-camera scenes ('wait and observe'): writing an Exa-derived action sentence into the cross-attention register at gain 8 for the whole episode (scene_action constant) will make subjects act and ra
+  2026-11-15T18:58:00Z  measured  by experimenter supersededAt=None  source=measured-act-register-constant
+      Still-camera scenes: scene_action constant (action register at gain 8 all episode) LOWERS judged insight, 2.86 -> 2.40 over 15 development cases, two Gemini passes (sweep27). Judge reasons: the subjec
+  2026-11-15T20:25:00Z  measured  by experimenter supersededAt=None  source=measured-act-register-schedules
+      Still-camera scenes, two Gemini passes. Development cases (15, sweep29): no write 2.51, scene_action impulse 2.75, scene_action timeline 2.14. Held-out cases (15, sweep32): impulse minus no write +0.0
+  2026-11-15T20:26:00Z  rule      by experimenter supersededAt=None  source=rule-act-register
+      Rule for every agent that builds a program: on still-camera scenes scene_action is none. Constant and timeline lower judged scores (measured); impulse was tested on 30 cases and has no measured gain.
+
+== planner decisions, now ==
+  OE002  scene_action none      -> act_register null | RULE requires alive=0 until judged gain is shown; measured evidence shows alive lowers scores. RULE requires scene_action=none on 
+  OE005  scene_action none      -> act_register null | Wait-and-observe still-camera scenes require anchor 0.5 (measured +0.27 gain), alive 0 (measured -0.60 loss at 0.03/0.06), action_
+  OE013  scene_action none      -> act_register null | Alive 0.06 was measured to lower scores (2.19 baseline vs 1.59 with alive 0.06); scene_action none is ruled for still-camera scene
+  OE066  scene_action none      -> act_register null | Rules require alive=0 and scene_action=none; measured evidence supports anchor=0.5 for wait-and-observe scenes; action_register=0 
+
+== change ==
+as of 10:30 (belief only): constant 4  (of 4 cases)
+as of 11:05 (belief, measurement, rule): none 4  (of 4 cases)
+now: none 4  (of 4 cases)
