@@ -51,7 +51,8 @@ def run_job(stepper, model, job, data, log=print, after_each=None):
         custom = (job.get("custom") or {}).get(task_id)
         if custom:        # a case that is not in the benchmark: our own image, caption, request and actions
             case = dict(custom, task_id=task_id)
-            img = Image.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "results", custom["image"]))
+            img = Image.open(custom.get("image_abs") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                                                                      "results", custom["image"]))
         else:
             split, case = find_case(data, task_id)
             img = Image.open(image_for(data, split, case))

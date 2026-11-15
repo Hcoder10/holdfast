@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Holdfast live</title>
+<style>
+  :root { --bg:#0e1014; --panel:#171a20; --line:#2a2f38; --fg:#eeeee8; --dim:#969ca4; --good:#78c896; --bad:#e68c6e; --warn:#f0c85a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  main { max-width:1180px; margin:0 auto; padding:28px 16px 60px; }
+  h1 { font-size:40px; margin:0 0 4px; letter-spacing:-.5px; }
+  .sub { color:var(--dim); margin:0 0 22px; font-size:18px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px; }
+  .row { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; }
+  label { display:block; font-size:13px; color:var(--dim); margin-bottom:6px; }
+  select, input[type=text], input[type=password] { background:#0f1217; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font:inherit; min-width:210px; }
+  input[type=file] { color:var(--dim); max-width:270px; }
+  button { background:var(--good); color:#0b1a12; border:0; border-radius:8px; padding:11px 20px; font:600 16px inherit; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  button:disabled { opacity:.45; cursor:default; }
+  #status { color:var(--warn); min-height:24px; margin-top:12px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .clip h2 { font-size:19px; margin:0 0 8px; }
+  .clip.base h2 { color:var(--bad); } .clip.ours h2 { color:var(--good); }
+  .frame { position:relative; aspect-ratio:832/480; background:#0b0d11; border:1px solid var(--line); border-radius:10px; overflow:hidden; display:grid; place-items:center; color:var(--dim); }
+  .frame video, .frame img { width:100%; height:100%; object-fit:cover; display:block; }
+  .note { color:var(--dim); font-size:14px; margin-top:8px; min-height:21px; }
+  .ask { font-size:18px; margin:0 0 12px; } .ask b { color:var(--fg); } .cap { color:var(--dim); font-size:14px; margin:0 0 14px; }
+  .controls { display:flex; gap:10px; margin-top:14px; }
+  .how { color:var(--dim); font-size:14px; } .how b { color:var(--fg); }
+  @media (max-width:760px) { .grid { grid-template-columns:1fr; } h1 { font-size:30px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Holdfast, live</h1>
+  <p class="sub">Upload any photo. The same open world model generates the same camera path twice: untouched, and with Holdfast writing into its hidden state.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div><label for="img">Photo</label><input id="img" type="file" accept="image/*"></div>
+      <div><label for="path">Camera path</label>
+        <select id="path">
+          <option value="walk">Walk forward, then back to the start</option>
+          <option value="slide">Slide right, then back to the start</option>
+          <option value="inout">Walk in, back out, in again</option>
+          <option value="long">Walk forward and back, twice (24 s)</option>
+          <option value="turn">Turn right 90 degrees, then back</option>
+          <option value="still">Hold the camera still (18 s)</option>
+        </select></div>
+      <div><label for="code">Access code</label><input id="code" type="password" autocomplete="off"></div>
+      <div><button id="go">Generate both</button></div>
+      <div><button id="warm" class="ghost" title="Load the model on both GPUs before your first run">Warm up</button></div>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <div class="panel" id="result" hidden>
+    <p class="ask"><b>Asked:</b> <span id="ask"></span></p>
+    <p class="cap" id="cap"></p>
+    <div class="grid">
+      <div class="clip base"><h2>Unmodified model</h2><div class="frame" id="f-unmodified">waiting</div><div class="note" id="n-unmodified"></div></div>
+      <div class="clip ours"><h2>Holdfast</h2><div class="frame" id="f-holdfast">waiting</div><div class="note" id="n-holdfast"></div></div>
+    </div>
+    <div class="controls"><button id="replay" class="ghost" disabled>Replay both together</button></div>
+  </div>
+
+  <p class="how"><b>What to look for:</b> where each clip ends. The model only remembers about three seconds, so after it leaves a view it makes a new one up. Holdfast keeps a checkpoint of the model's state where the camera stopped and writes it back when the camera returns. No weights are changed. The first run after a pause takes several minutes while the model loads on two GPUs; after that a clip takes a minute or two.</p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const tags = ["unmodified", "holdfast"];
+let timer = null, vids = {};
+function say(t, bad) { $("status").textContent = t; $("status").style.color = bad ? "var(--bad)" : "var(--warn)"; }
+$("code").value = localStorage.getItem("hf_code") || "";
+
+$("warm").onclick = async () => {
+  const fd = new FormData(); fd.append("code", $("code").value);
+  const r = await fetch("api/warm", { method: "POST", body: fd });
+  say(r.ok ? "Warming up both GPUs. The model takes several minutes to load; you can start a run at any time." : "Wrong access code.", !r.ok);
+};
+
+$("go").onclick = async () => {
+  const f = $("img").files[0];
+  if (!f) return say("Choose a photo first.", true);
+  localStorage.setItem("hf_code", $("code").value);
+  const fd = new FormData(); fd.append("image", f); fd.append("path", $("path").value); fd.append("code", $("code").value);
+  $("go").disabled = true; say("Uploading and captioning the photo ...");
+  let r;
+  try { r = await fetch("api/run", { method: "POST", body: fd }); } catch (e) { $("go").disabled = false; return say("Upload failed: " + e, true); }
+  if (!r.ok) { $("go").disabled = false; return say(r.status === 403 ? "Wrong access code." : "Could not start: " + (await r.text()).slice(0, 200), true); }
+  const j = await r.json();
+  $("result").hidden = false; $("ask").textContent = j.ask; $("cap").textContent = "Scene, as described to the model: " + j.caption;
+  vids = {}; $("replay").disabled = true;
+  for (const t of tags) { $("f-" + t).innerHTML = '<img alt="the uploaded photo" src="api/input/' + j.id + '">'; $("n-" + t).textContent = "generating ..."; }
+  clearInterval(timer); timer = setInterval(() => poll(j.id), 4000); poll(j.id);
+};
+
+async function poll(id) {
+  let s; try { s = await (await fetch("api/status/" + id)).json(); } catch (e) { return; }
+  let done = 0;
+  for (const t of tags) {
+    const a = s.arms[t];
+    if (a.error) { $("n-" + t).textContent = "failed: " + a.error; done++; continue; }
+    if (!a.ready) continue;
+    done++;
+    if (!vids[t]) {
+      const v = document.createElement("video");
+      v.src = "api/video/" + id + "/" + t; v.muted = true; v.playsInline = true; v.controls = true; v.loop = true;
+      $("f-" + t).innerHTML = ""; $("f-" + t).appendChild(v); vids[t] = v;
+      const w = (a.writes || []).length;
+      $("n-" + t).textContent = t === "holdfast"
+        ? (w ? "State written back " + w + " time" + (w > 1 ? "s" : "") + ", at " + a.writes.map(x => x.at + " s").join(", ") + "." : "No write-back fired on this path.")
+        : "No writes. " + Math.round(a.chunks * 0.75) + " s of video.";
+    }
+  }
+  if (done === tags.length) {
+    clearInterval(timer); $("go").disabled = false; $("replay").disabled = false;
+    say("Done in " + Math.floor(s.seconds / 60) + " min " + (s.seconds % 60) + " s."); sync();
+  } else {
+    say("Generating on two GPUs ... " + Math.floor(s.seconds / 60) + " min " + (s.seconds % 60) + " s" + (s.seconds > 90 && done === 0 ? " (loading the model if this is the first run)" : ""));
+  }
+}
+function sync() { for (const t of tags) if (vids[t]) { vids[t].currentTime = 0; vids[t].play().catch(() => {}); } }
+$("replay").onclick = sync;
+</script>
+</body>
+</html>

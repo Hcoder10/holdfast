@@ -129,6 +129,8 @@ modal run modal_app/wh_modal.py::generate --job-json '{"cases":["IF006"],"modes"
 python -I -X utf8 scripts/live_demo.py my_photo.jpg --action "w*6 -> s*6"
 ```
 
+There is also a live web page ([`modal_app/live_app.py`](modal_app/live_app.py)): upload any photo, pick a camera path, and two Modal GPUs generate the untouched model and Holdfast side by side (about 75 seconds once warm). It is deployed with `modal deploy modal_app/live_app.py` behind an access code.
+
 Keys go in a `.env` file that is not in this repo.
 
 ## Repo map
