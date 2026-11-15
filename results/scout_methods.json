@@ -1,0 +1,355 @@
+{
+ "low_scoring_cases": 35,
+ "modes": [
+  {
+   "mode": "replaced_on_return",
+   "cases": 21,
+   "example": "GC020: 视频成功执行了相机的左右平移，背景和多数物体保持稳定，但浅蓝色自行车在相机返回时未能重现于原位，而是瞬移到了镜头正前方，导致身份和空间关系严重错误。",
+   "query": "method for object permanence and scene consistency when the camera returns to a previously seen view in an interactive video world model, memory for revisits",
+   "results": [
+    {
+     "title": "1History Forcing for long-horizon video world models. Left ...",
+     "url": "https://arxiv.org/html/2611.02782v1",
+     "published": "2026-11-02"
+    },
+    {
+     "title": "MosaicMem: Hybrid Spatial Memory for Controllable Video ...",
+     "url": "https://arxiv.org/html/2603.17117v1",
+     "published": "2026-03-17"
+    },
+    {
+     "title": "WorldMem: Long-term Consistent World Simulation with Memory",
+     "url": "https://arxiv.org/pdf/2504.12369",
+     "published": "2025-04-16"
+    },
+    {
+     "title": "ReWorld: An Interactive World Model with Long-Horizon Memory | alphaXiv",
+     "url": "https://www.alphaxiv.org/abs/2608.23565",
+     "published": "2026-08-24"
+    },
+    {
+     "title": "VMem: Consistent Interactive Video Scene Generation with Surfel-Indexed View Memory",
+     "url": "https://arxiv.org/pdf/2506.18903",
+     "published": "2025-06-23"
+    },
+    {
+     "title": "UCM: Unified Modeling of Camera Control and Memory with Time-aware Positional Encoding Warping for World Models | alphaXiv",
+     "url": "https://www.alphaxiv.org/abs/2602.22960",
+     "published": "2026-06-29"
+    }
+   ],
+   "proposals": [
+    {
+     "technique": "Surfel-Indexed View Memory (VMem)",
+     "idea": "Geometrically index and retrieve past views based on 3D surface elements to maintain scene coherence when revisiting locations.",
+     "port": "attention_cache",
+     "setting": "Expand the rolling window in attention_cache to include geometrically-indexed past frames from revisited camera viewpoints, weighted by spatial correspondence rather than just recency.",
+     "source_url": "https://arxiv.org/pdf/2506.18903",
+     "source_title": "VMem: Consistent Interactive Video Scene Generation with Surfel-Indexed View Memory",
+     "published": "2025-06-23",
+     "already_tested": "gain 2-1000 on the first frames, a heading-indexed bank, windows of 30-42 frames (frames, no gain)"
+    },
+    {
+     "technique": "Temporal Misalignment in Memory Conditioning",
+     "idea": "Pair rendered images from different time steps to force the model to distinguish static geometry (which should match memory) from dynamic content (which should follow current context).",
+     "port": "image_condition",
+     "setting": "When conditioning on keyframes from revisited locations, deliberately introduce temporal offset between the conditioning frame's timestamp and the current generation step to prevent naive replay of stale object positions.",
+     "source_url": "https://www.alphaxiv.org/abs/2602.22960",
+     "source_title": "UCM: Unified Modeling of Camera Control and Memory with Time-aware Positional Encoding Warping for World Models | alphaXiv",
+     "published": "2026-06-29",
+     "already_tested": "keyframe arrival on the first frame (frames, clean, rarely triggers) and on a shadow-world frame (being judged)"
+    },
+    {
+     "technique": "Camera-Aware Memory Retrieval with Modified RoPE",
+     "idea": "Use a camera control module to align retrieved memory patches with the queried camera viewpoint via position encoding that encodes camera-memory correspondence.",
+     "port": "camera_modulation",
+     "setting": "When revisiting a location, modulate the camera scale and shift to explicitly encode the correspondence between the current viewpoint and the retrieved memory patch's original viewing angle.",
+     "source_url": "https://arxiv.org/html/2603.17117v1",
+     "source_title": "MosaicMem: Hybrid Spatial Memory for Controllable Video ...",
+     "published": "2026-03-17",
+     "already_tested": "extrapolation w = 1.5-5 (frames, fixes ignored strafes, over-rotates other cases)"
+    }
+   ]
+  },
+  {
+   "mode": "frozen",
+   "cases": 11,
+   "example": "OE027: 视频虽然执行了镜头的左右旋转，但视线返回后，两架飞机被冻结在初始的起飞位置和姿态，未能继续升空，且长机尾号从5变为2，初始场景中的地面车辆和风向标也完全消失，最后前景还突兀地出现了一个巨大的机头。",
+   "query": "training-free method to stop an autoregressive video diffusion world model from freezing: subject stays static or motion collapses during long rollout",
+   "results": [
+    {
+     "title": "Tether the Subject, Release the Scene: Query-Aware Memory Routing for Long-Horizon Autoregressive Video Generation",
+     "url": "https://doi.org/10.48550/arxiv.2608.26902",
+     "published": "2026-08-27"
+    },
+    {
+     "title": "DISK: Dynamic Inference SKipping for World Models | alphaXiv",
+     "url": "https://www.alphaxiv.org/abs/2602.00440",
+     "published": "2026-01-31"
+    },
+    {
+     "title": "🚨The code for our paper “Deep Forcing: Training-Free Long Video Generation with Deep Sink and Participative Compression” is now available! | Jung Yi",
+     "url": "https://www.linkedin.com/posts/jung-yi-a93294241_kaist-autoregressivevideodiffusion-worldmodel-activity-7426882761896108032-3h6a",
+     "published": "2026-02-10"
+    },
+    {
+     "title": "MagicWorld: Towards Long-Horizon Stability for Interactive Video World Exploration",
+     "url": "https://arxiv.org/html/2511.18886v2",
+     "published": "2026-03-18"
+    },
+    {
+     "title": "LongForcing: Scaling Temporal Manifold Matching for Long-Horizon World Rollout",
+     "url": "https://arxiv.org/pdf/2610.18289",
+     "published": "2026-10-13"
+    },
+    {
+     "title": "FreqForcing: Autoregressive Long Video Generation via Spectral Self-Anchoring | alphaXiv",
+     "url": "https://www.alphaxiv.org/abs/2607.27110",
+     "published": "2026-08-03"
+    }
+   ],
+   "proposals": [
+    {
+     "technique": "Query-Aware Memory Routing (TetherMem)",
+     "idea": "Selectively expose subject and scene queries to history through different routing policies to prevent background/viewpoint locking while maintaining subject consistency.",
+     "port": "attention_cache",
+     "setting": "Implement differential gain scheduling on attention cache: apply higher retention weight to subject-relevant tokens in the rolling window while allowing scene tokens to decay faster, enabling viewpoint progression without full memory reset.",
+     "source_url": "https://doi.org/10.48550/arxiv.2608.26902",
+     "source_title": "Tether the Subject, Release the Scene: Query-Aware Memory Routing for Long-Horizon Autoregressive Video Generation",
+     "published": "2026-08-27",
+     "already_tested": "gain 2-1000 on the first frames, a heading-indexed bank, windows of 30-42 frames (frames, no gain)"
+    },
+    {
+     "technique": "Deep Sink with Importance-Aware KV Cache Pruning",
+     "idea": "Maintain an enlarged attention sink in KV cache while pruning redundant tokens based on actual attention patterns, preventing both memory degradation and motion stagnation.",
+     "port": "attention_cache",
+     "setting": "Increase permanent frames in attention cache to ~50% of KV cache size and implement importance-weighted pruning of rolling window tokens based on attention weights, evicting low-attention tokens between chunks.",
+     "source_url": "https://www.linkedin.com/posts/jung-yi-a93294241_kaist-autoregressivevideodiffusion-worldmodel-activity-7426882761896108032-3h6a",
+     "source_title": "🚨The code for our paper “Deep Forcing: Training-Free Long Video Generation with Deep Sink and Participative Compression” is now available! | Jung Yi",
+     "published": "2026-02-10",
+     "already_tested": "gain 2-1000 on the first frames, a heading-indexed bank, windows of 30-42 frames (frames, no gain)"
+    },
+    {
+     "technique": "Spectral Self-Anchoring (FreqForcing)",
+     "idea": "Counteract low-frequency energy drift (color/motion degradation) by anchoring frequency-domain statistics of generated chunks to reference spectral signatures.",
+     "port": "latent_statistics",
+     "setting": "Shift each chunk's latents toward reference statistics in the frequency domain, specifically boosting low-frequency component magnitudes to prevent color drift and motion stagnation in long rollouts.",
+     "source_url": "https://www.alphaxiv.org/abs/2607.27110",
+     "source_title": "FreqForcing: Autoregressive Long Video Generation via Spectral Self-Anchoring | alphaXiv",
+     "published": "2026-08-03",
+     "already_tested": "re-anchoring at 0.5 (judged, insight +0.27)"
+    }
+   ]
+  },
+  {
+   "mode": "hard_cut",
+   "cases": 9,
+   "example": "GC020: 视频成功执行了相机的左右平移，背景和多数物体保持稳定，但浅蓝色自行车在相机返回时未能重现于原位，而是瞬移到了镜头正前方，导致身份和空间关系严重错误。",
+   "query": "preventing abrupt scene resets or hard cuts in long autoregressive video generation with a sliding attention window",
+   "results": [
+    {
+     "title": "LoL: Longer than Longer, Scaling Video Generation to Hour | alphaXiv",
+     "url": "https://www.alphaxiv.org/abs/2601.16914",
+     "published": "2026-01-23"
+    },
+    {
+     "title": "ICLR Poster LongLive: Real-time Interactive Long Video Generation",
+     "url": "https://iclr.cc/virtual/2026/poster/10007501",
+     "published": "2026-02-06"
+    },
+    {
+     "title": "Context as Memory: Scene-Consistent Interactive Long Video Generation with Memory Retrieval",
+     "url": "https://arxiv.org/abs/2506.03141",
+     "published": "2025-06-03"
+    },
+    {
+     "title": "Echo-Forcing: A Scene Memory Framework for Interactive ...",
+     "url": "https://arxiv.org/html/2605.16003v1",
+     "published": "2026-05-15"
+    },
+    {
+     "title": "FreqForcing: Autoregressive Long Video Generation via Spectral Self-Anchoring · Pith",
+     "url": "https://pith.science/paper/2607.27110",
+     "published": "2026-07-29"
+    },
+    {
+     "title": "InfLVG: Reinforce Inference-Time ConsistentLong Video Generation with GRPO",
+     "url": "https://arxiv.org/html/2505.17574",
+     "published": "2025-05-23"
+    }
+   ],
+   "proposals": [
+    {
+     "technique": "Echo-Forcing (Scene Memory Framework with separated KV cache policies)",
+     "idea": "Separate the attention cache into stable anchors (old frames) and recent dynamics (new frames) with independent policies to prevent outdated background contamination when scenes change.",
+     "port": "attention_cache",
+     "setting": "Split the rolling window into two independent cache tracks: a fixed set of early permanent frames (anchor branch) and a shorter recent window (local branch), with separate gain scheduling for each; merge them at decode time.",
+     "source_url": "https://arxiv.org/html/2605.16003v1",
+     "source_title": "Echo-Forcing: A Scene Memory Framework for Interactive ...",
+     "published": "2026-05-15",
+     "already_tested": "gain 2-1000 on the first frames, a heading-indexed bank, windows of 30-42 frames (frames, no gain)"
+    },
+    {
+     "technique": "FreqForcing (Spectral Self-Anchoring with frequency-domain fusion)",
+     "idea": "Fuse local attention outputs with frozen anchor frames in the frequency domain (via 3D FFT) to smooth transitions and prevent hard cuts by blending spatial-temporal low-frequency components.",
+     "port": "residual_direction",
+     "setting": "Add a frequency-domain blending direction to the residual stream: after computing local and anchor attention branches separately, weight and fuse their residuals in frequency space using a spatial-temporal Gaussian low-pass filter, injecting this blend back at mid-to-late decoder blocks.",
+     "source_url": "https://pith.science/paper/2607.27110",
+     "source_title": "FreqForcing: Autoregressive Long Video Generation via Spectral Self-Anchoring · Pith",
+     "published": "2026-07-29",
+     "already_tested": "alive direction on sampling steps 0-1 (judged, lowers scores) and ablation (frames, colour cast)"
+    },
+    {
+     "technique": "Memory Retrieval (Context-as-Memory with selective historical conditioning)",
+     "idea": "Selectively retrieve and condition on relevant historical frames from context instead of naively concatenating all history, reducing discontinuity artifacts when scene transitions occur.",
+     "port": "image_condition",
+     "setting": "Before each chunk, retrieve the most contextually relevant historical frames (e.g., via similarity to current latents) and pin them as keyframe conditioning inputs at the first few positions, replacing uniform context concatenation.",
+     "source_url": "https://arxiv.org/abs/2506.03141",
+     "source_title": "Context as Memory: Scene-Consistent Interactive Long Video Generation with Memory Retrieval",
+     "published": "2025-06-03",
+     "already_tested": "keyframe arrival on the first frame (frames, clean, rarely triggers) and on a shadow-world frame (being judged)"
+    }
+   ]
+  },
+  {
+   "mode": "trajectory_not_executed",
+   "cases": 6,
+   "example": "IF027: 视频在第5帧发生严重的硬重置，敌人消失且环境突变，猴王未能执行冲锋和战斗的指令，互动完全失败。",
+   "query": "improving camera control adherence in camera-conditioned video diffusion: model ignores commanded camera translation or rotation",
+   "results": [
+    {
+     "title": "ConfCtrl: Enabling Precise Camera Control in Video Diffusion via Confidence-Aware Interpolation",
+     "url": "https://arxiv.org/abs/2603.09819v1",
+     "published": "2026-03-10"
+    },
+    {
+     "title": "Adobe Research » Boosting Camera Motion Control for Video Diffusion Transformers",
+     "url": "https://research.adobe.com/publication/boosting-camera-motion-control-for-video-diffusion-transformers/",
+     "published": "2025-11-24"
+    },
+    {
+     "title": "Wonder: Video World Model Done Better",
+     "url": "https://arxiv.org/abs/2607.26037",
+     "published": "2026-06-17"
+    },
+    {
+     "title": "AC3D: Analyzing and Improving 3D Camera Control in Video Diffusion Transformers",
+     "url": "https://research.snap.com/publications/ac3d-analyzing-and-improving-3d-camera-control-in-video-diffusion-transformers.html",
+     "published": "2025-06-11"
+    },
+    {
+     "title": "CamPilot: Improving Camera Control in Video Diffusion Model with Efficient Camera Reward Feedback",
+     "url": "https://arxiv.org/abs/2601.16214",
+     "published": "2026-01-22"
+    },
+    {
+     "title": "Virtually Being: Customizing Camera-Controllable Video Diffusion Models with Multi-View Performance Captures | alphaXiv",
+     "url": "https://www.alphaxiv.org/abs/2510.14179",
+     "published": "2025-10-16"
+    }
+   ],
+   "proposals": [
+    {
+     "technique": "Camera Motion Guidance (CMG)",
+     "idea": "Apply classifier-free guidance specifically to camera control signals to boost adherence to prescribed camera trajectories.",
+     "port": "cross_attention_gain",
+     "setting": "Schedule cross-attention gain on camera pose tokens higher during early diffusion steps when motion structure is established, varying gain by camera heading direction.",
+     "source_url": "https://research.adobe.com/publication/boosting-camera-motion-control-for-video-diffusion-transformers/",
+     "source_title": "Adobe Research » Boosting Camera Motion Control for Video Diffusion Transformers",
+     "published": "2025-11-24",
+     "already_tested": "objective register (judged, in the final program, interaction +0.25) and caption gate (judged, no score gain)"
+    },
+    {
+     "technique": "Visibility-aware reward strategy",
+     "idea": "Restrict supervision to pixels visible in the conditioning image to resolve latent-camera pose misalignment that causes trajectory failures.",
+     "port": "image_condition",
+     "setting": "Pin conditioning frames at chunk boundaries using visibility masks, ensuring only geometrically feasible regions constrain the model's camera-aware representations.",
+     "source_url": "https://arxiv.org/abs/2601.16214",
+     "source_title": "CamPilot: Improving Camera Control in Video Diffusion Model with Efficient Camera Reward Feedback",
+     "published": "2026-01-22",
+     "already_tested": "keyframe arrival on the first frame (frames, clean, rarely triggers) and on a shadow-world frame (being judged)"
+    },
+    {
+     "technique": "Confidence-aware interpolation",
+     "idea": "Weight intermediate camera poses by confidence scores to avoid noisy pose projections that derail trajectory execution.",
+     "port": "state_fork",
+     "setting": "Fork generation at decision points where camera pose confidence is low, run parallel rollouts with interpolated poses, and select the trajectory with highest consistency to target poses.",
+     "source_url": "https://arxiv.org/abs/2603.09819v1",
+     "source_title": "ConfCtrl: Enabling Precise Camera Control in Video Diffusion via Confidence-Aware Interpolation",
+     "published": "2026-03-10",
+     "already_tested": "shadow rollout with pixel pasting (judged, no gain); shadow world with keyframe write-back (being judged)"
+    }
+   ]
+  },
+  {
+   "mode": "no_evolution_out_of_view",
+   "cases": 2,
+   "example": "OE051: 镜头转动时原场景和落后摩托车完全消失并被新环境取代，未能展现任何合理的视野外演进，且前景摩托车始终固定在画面中央。",
+   "query": "world model state continues to evolve while off screen, out-of-view dynamics simulation in generative world models",
+   "results": [
+    {
+     "title": "LiveWorld: Simulating Out-of-Sight Dynamics in Generative Video World Models",
+     "url": "https://arxiv.org/html/2603.07145v2",
+     "published": "2026-03-24"
+    },
+    {
+     "title": "EvoWorld: Towards Out-of-Sight World Evolution in Generative Video Models",
+     "url": "https://arxiv.org/html/2611.06748v2",
+     "published": "2026-11-05"
+    },
+    {
+     "title": "Out of Sight, Out of Mind? Evaluating State Evolution in Video World Models",
+     "url": "https://arxiv.org/abs/2603.13215",
+     "published": "2026-03-13"
+    },
+    {
+     "title": "World Observer: Joint Actor-Observer Generation for Persistent World Modeling",
+     "url": "https://arxiv.org/html/2610.02162",
+     "published": "2026-10-01"
+    },
+    {
+     "title": "Momentum: Persistent Dynamics for Video World Models",
+     "url": "https://arxiv.org/html/2610.23423v1",
+     "published": "2026-10-16"
+    },
+    {
+     "title": "Current World Models Lack a Persistent State Core | alphaXiv",
+     "url": "https://www.alphaxiv.org/abs/2606.20545",
+     "published": "2026-06-18"
+    }
+   ],
+   "proposals": [
+    {
+     "technique": "Joint Actor-Observer Generation",
+     "idea": "Maintain panoramic observer perspectives that watch world regions beyond the actor's view, allowing off-screen objects to evolve independently and consistently.",
+     "port": "needs_new_code",
+     "setting": "Would require architectural changes to jointly generate multiple viewpoints; cannot be retrofitted to existing ports.",
+     "source_url": "https://arxiv.org/html/2610.02162",
+     "source_title": "World Observer: Joint Actor-Observer Generation for Persistent World Modeling",
+     "published": "2026-10-01",
+     "already_tested": null
+    },
+    {
+     "technique": "Momentum (Persistent Dynamics Representation)",
+     "idea": "Decouple scene evolution from observation by maintaining an evolving internal state that continues updating even when regions are out-of-view.",
+     "port": "latent_statistics",
+     "setting": "Shift latent chunks toward statistics computed from a persistent momentum buffer that tracks off-screen regions, updated based on inferred dynamics from the last observed state.",
+     "source_url": "https://arxiv.org/html/2610.23423v1",
+     "source_title": "Momentum: Persistent Dynamics for Video World Models",
+     "published": "2026-10-16",
+     "already_tested": "re-anchoring at 0.5 (judged, insight +0.27)"
+    },
+    {
+     "technique": "Persistent State Core",
+     "idea": "Maintain an internal world state that evolves decoupled from observation, preserving object dynamics and ensuring consistent re-appearance.",
+     "port": "state_fork",
+     "setting": "Run a shadow rollout that simulates world evolution in the off-screen region during camera pans, then merge the persistent state back when that region re-enters view.",
+     "source_url": "https://www.alphaxiv.org/abs/2606.20545",
+     "source_title": "Current World Models Lack a Persistent State Core | alphaXiv",
+     "published": "2026-06-18",
+     "already_tested": "shadow rollout with pixel pasting (judged, no gain); shadow world with keyframe write-back (being judged)"
+    }
+   ]
+  }
+ ]
+}

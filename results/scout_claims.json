@@ -1,0 +1,43 @@
+[
+ {
+  "claim": "PlayWorld reports Genie 3 at an overall score of 2.12",
+  "url": "https://kxding.github.io/project/PlayWorld/",
+  "verdict": "not found on page",
+  "found": {
+   "2.12": false
+  },
+  "context": "",
+  "page_chars": 3416
+ },
+ {
+  "claim": "PlayWorld reports Matrix-Game-3.0 at an overall score of 1.14",
+  "url": "https://kxding.github.io/project/PlayWorld/",
+  "verdict": "not found on page",
+  "found": {
+   "1.14": false
+  },
+  "context": "",
+  "page_chars": 3416
+ },
+ {
+  "claim": "PlayWorld has 171 cases across four dimensions",
+  "url": "https://kxding.github.io/project/PlayWorld/",
+  "verdict": "supported",
+  "found": {
+   "171": true
+  },
+  "context": "n Tao · Pengfei Wan · Hengshuang Zhao Kuaishou Technology · The University of Hong Kong 171 Cases 1,417 Videos 10–60s Rollouts 9+ Models Paper GitHub Leaderboard Dataset ## Model",
+  "page_chars": 3416
+ },
+ {
+  "claim": "Sparks of Weight-Space Programming: a 0.016% weight edit took Qwen3.5-0.8B from 7.9% to 48.1% on MATH-500",
+  "url": "https://rikiyat.github.io/blog/weight-space-programming/",
+  "verdict": "supported",
+  "found": {
+   "0.016": true,
+   "48.1": true
+  },
+  "context": "easoning loops that Qwen’s own model card warns about, and fixes this by natively editing 0.016% of the weights. With the same sampling settings, this weight correction raises MATH-500",
+  "page_chars": 36611
+ }
+]

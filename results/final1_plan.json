@@ -125,5 +125,71 @@
    "gain": 4
   }
  },
- "note": "Part A (third-person interaction + insight) was launched at 03:07 with cfg_without_return_register; the return register does not apply to those cases, so both parts run the same program. Part B (first-person) launched at 03:20 with cfg."
+ "note": "Part A (third-person interaction + insight) was launched at 03:07 with cfg_without_return_register; the return register does not apply to those cases, so both parts run the same program. Part B (first-person) launched at 03:20 with cfg.",
+ "v2": {
+  "note": "Designed after the held-out result was known (06:20-07:10). Differs from cfg only on first-person cases: no caption gate or return register; shadow world with keyframe write-back instead. Third-person and wait-and-observe cases run the same program as in final1, so their final1 videos and scores are reused.",
+  "cfg": {
+   "prompt": "caption+objective",
+   "register": {
+    "gain": 8,
+    "when": "third person",
+    "replace": true
+   },
+   "anchor_stats": 0.5,
+   "bank": {
+    "via": "key",
+    "shadow": true,
+    "tol": 18,
+    "pos_tol": 1.2
+   }
+  },
+  "cases_generated": [
+   "IF003",
+   "GC001",
+   "GC003",
+   "GC004",
+   "GC006",
+   "GC007",
+   "GC011",
+   "GC012",
+   "GC013",
+   "GC014",
+   "GC017",
+   "GC018",
+   "GC019",
+   "GC020",
+   "GC022",
+   "GC024",
+   "GC030",
+   "GC034",
+   "GC035",
+   "GC037",
+   "GC041",
+   "GC043",
+   "GC044",
+   "GC045",
+   "GC046",
+   "OE014",
+   "OE015",
+   "OE016",
+   "OE021",
+   "OE024",
+   "OE026",
+   "OE027",
+   "OE030",
+   "OE031",
+   "OE034",
+   "OE039",
+   "OE041",
+   "OE042",
+   "OE047",
+   "OE049",
+   "OE051",
+   "OE055",
+   "OE058",
+   "OE059",
+   "OE062",
+   "OE067"
+  ]
+ }
 }

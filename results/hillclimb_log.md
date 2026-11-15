@@ -271,3 +271,22 @@ it on for every case: 0.03 on eleven and 0.06 on ten, never 0. Per case it lost 
 always-on arm, the dose-response is clear: none 2.19, 0.03 everywhere 2.08, mostly 0.06 1.59. The residual "alive"
 write lowers judged scores. A decision model is only as good as the measured effects in its menu; this menu entry
 was a belief, not a measurement.
+
+### Shadow world and first-frame pin, judged (sweep22, 07:10)
+
+11 development-half turn-and-return cases, two Gemini passes (repeat spread 0.36).
+
+| arm | mean of 11 | per case vs base | better / worse | out-of-sight gate passes (of 7) |
+|---|---|---|---|---|
+| base | 1.62 | | | 4 |
+| pin the arriving frame to the first frame | 1.90 | +0.28 | 5 / 4 | 7 |
+| shadow world (pin to the forked state's current frame) | 1.88 | +0.26 | 4 / 4 | 6 |
+
+Both write-backs through the image-condition channel help by about a quarter point per case, mostly on the four
+geometry cases (1.95 -> 2.60 and 2.67), and both make the return legible to the trajectory gate. Simulating the
+unseen view adds nothing measurable over pinning the stale first frame; on the seven cases where the shadow wrote
+back the change is +0.04. Out-of-sight scores stay near 1.4-1.5 in all arms: the gate is passed, the evolution is not credited.
+
+| Modal ledger | GPU-h | est. cost |
+|---|---|---|
+| final2: shadow world on the 46 first-person held-out cases (6 GPUs) | 5.5 | $25 |
