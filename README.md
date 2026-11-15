@@ -18,9 +18,9 @@ A 5 minute plan to see what this is and whether it is real.
 
 WHY you should consider this to win:
 
-1. **It beats a closed model with an open one, and no training.** Same judge, same 171 cases: the untouched model scores 2.10, Holdfast scores 2.31. Genie 3's published score is 2.12.
-2. **The gains come from inside the model.** You may have heard of weight-space programming (editing a model's weights like code). This is the same idea one level up: I edit the model's *hidden state*, the working memory it uses while it generates. Each edit fixes one problem you can see on screen.
-3. **I tested it the hard way.** I picked the settings on half the benchmark, then ran them once on the other half I had never looked at. The gain held. Everything that did *not* work is written down too (there is a lot of it).
+1. **It beats a closed model with an open one, and no training.** With the same judge, same 171 cases as the github: the untouched model scores 2.10, Holdfast scores 2.31. Genie 3's published score is 2.12. (we beat Genie!!)
+2. **The gains come from inside the model.** You may have heard of weight-space programming (editing a model's weights like code). This is the same idea one level up: I edit the model's *hidden state*, the working memory it uses while it generates. Each edit fixes one problem you can see on screen. I find it super interesting!
+3. **I tested it the hard way.** I picked the settings on half the benchmark, then ran them once on the other half I had never looked at. The gain held. Everything that did *not* work is written down too (there is.. a lot of it).
 
 Now, here is how to experience this project:
 
@@ -103,7 +103,7 @@ That sentence goes into the model's attention as its own slot, kept silent while
 
 Exa also finds recent papers for each kind of failure the judge reports ([`results/scout_report.md`](results/scout_report.md)) and checked the numbers quoted here against their live sources: 4 of 4 confirmed ([`results/scout_claims.json`](results/scout_claims.json)).
 
-Straight talk: Exa-sourced writes are part of the 2.31 program, but tested on their own they did not add to the score.
+Straight talk: Exa-sourced writes are part of the 2.31 program, but tested on their own they did not add to the score. I likely need some more testing to figure this out.
 
 ## past.dev: the model's memory between runs
 
@@ -113,11 +113,11 @@ Nine small agents work around the model (a planner, a critic, an experimenter an
 - **It decides what gets written into the model.** Before every run, the planner reads what other agents *measured* and picks the settings. One agent believed a certain write fixed frozen scenes. Another measured it: the score dropped from **2.19 to 1.59**. past.dev marked the belief as replaced, and the planner stopped using that write on **8 of 8** scenes.
 - **It makes the planner more accurate, cheaply.** With past.dev the planner gets **92%** of its settings right, against **77%** with no shared memory, using about **a fifth of the prompt** that pasting the whole log would need ([`results/pastdev_bench.md`](results/pastdev_bench.md)).
 
-Straight talk: looking things up adds a round trip, so past.dev was *not* faster than pasting the whole log into the prompt at our log size. It was cheaper and nearly as accurate.
+Straight talk: looking things up adds a round trip, so past.dev was *not* faster than pasting the whole log into the prompt at our log size. But, it was cheaper and nearly as accurate, and one of the first times I've ever seen a memory service meant for llms be used in a world model!
 
 ## Modal: every experiment
 
-Every rollout ran on Modal H200 GPUs: about 35 sweeps over the weekend, up to **19 GPUs at once**, one case per GPU. Jobs are launched on Modal's side, so they kept running when my laptop was closed.
+Every rollout ran on Modal H200 GPUs: about 35 sweeps over the weekend, up to **19 GPUs at once!!**
 
 ## Run it
 
@@ -151,8 +151,8 @@ Built on [LingBot-World 2](https://github.com/Robbyant/lingbot-world-v2) and the
 # FAQ
 
 1. **Did you train or fine-tune anything?** No. Not one weight changes. Switch the writes off and you have the original model.
-2. **Is "beats Genie 3" a fair claim?** 2.31 against their published 2.12, yes. I could not run Genie 3 through my own judging, so the claim I stand behind most is 2.10 to 2.31 on the same model with the same judge.
-3. **Is it all hidden-state programming?** No. The biggest single piece is simply telling the model what was asked. The two hidden-state writes add the interaction and insight gains on top.
+2. **Is "beats Genie 3" a fair claim?** 2.31 against their published 2.12, yes. I could not run Genie 3 through my own judging, (google doesn't give an API as far as I know, so I used the published score from playworld)
+3. **Is it all hidden-state programming?** No. One of the biggest pieces is simply telling the model what was asked. In addition, the two hidden-state writes add the interaction and insight gains on top.
 4. **What did not work?** About twenty things, including the memory checkpoints as a score gain, steering the model's internal activations directly, and several ways of using Exa's answers. They are all in [`docs/DETAILS.md`](docs/DETAILS.md) with their numbers.
 5. **What still breaks?** A person standing still in a real photo will not start walking, whatever I write. And things that should change while you are not looking come back unchanged.
 
