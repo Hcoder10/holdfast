@@ -127,7 +127,12 @@ def _translate(kind, speed):
 class Episode:
     def __init__(self, stepper, mode="closed", speed=1.0, wait_chunks=None, log=print,
                  guide_from=1, guide_hard=True, timeline=None, anchor=False,
-                 guide_via="latent", memory_entries=None, player=None):
+                 guide_via="latent", memory_entries=None, player=None, cfg=None):
+        # cfg: knobs the hill-climb varies. Defaults reproduce the frozen method.
+        self.cfg = dict(cfg or {})
+        self.max_yaw = float(self.cfg.get("max_yaw", MAX_YAW_PER_CHUNK))
+        self.do_settle = bool(self.cfg.get("settle", True))
+        self.brief = None
         self.player = player          # PlayWorld's agent player (player.Player) or None
         self.model_name = "lingbot2_14b"
         self.history, self.chunk_frames = [], []
@@ -368,7 +373,7 @@ class Episode:
             remaining = target_deg - (now - start)
             if abs(remaining) < 4.0:
                 break
-            cmd = float(np.clip(remaining, -MAX_YAW_PER_CHUNK, MAX_YAW_PER_CHUNK))
+            cmd = float(np.clip(remaining, -self.max_yaw, self.max_yaw))
             kw = {axis: cmd}
             if axis == "yaw" and abs(self.pitch - self.level_pitch) > 3.0:
                 # the model tends to tilt during a sweep; steer back to the horizon
@@ -478,7 +483,8 @@ class Episode:
         finish exactly on the starting orientation and hold. Triggered by geometry
         only: the generator is never told that an episode is meant to return."""
         y = (self.yaw + 180.0) % 360.0 - 180.0
-        if self.mode == "memory" and self.been_away and abs(y) < 8.0 and abs(self.pitch) < 8.0:
+        if (self.mode == "memory" and self.do_settle and self.been_away
+                and abs(y) < 8.0 and abs(self.pitch) < 8.0):
             self._settle()
             self.been_away = False
             self.shadow = None   # the main rollout is back on the scene; the fork is no longer needed
@@ -518,6 +524,22 @@ class Episode:
     def run(self, case, image, seed=0):
         s = self.s
         self.caption = case["image_caption"]
+        for k in ("erode", "feather"):          # guidance blend widths, read by the stepper
+            if k in self.cfg:
+                setattr(s, k, int(self.cfg[k]))
+        if "guide_hard" in self.cfg:
+            self.guide_hard = bool(self.cfg["guide_hard"])
+        if "guide_from" in self.cfg:
+            self.guide_from = int(self.cfg["guide_from"])
+        if "speed" in self.cfg:
+            self.speed = float(self.cfg["speed"])
+        if self.cfg.get("brief", "none") != "none":
+            import brief
+            self.brief = brief.make(case, image, use_web=self.cfg.get("brief") != "llm")
+            if self.brief["brief"]:
+                # one text for the whole episode: the caption plus a sentence of motion
+                case = dict(case, image_caption=case["image_caption"].rstrip() + " " + self.brief["brief"])
+                self.caption = case["image_caption"]
         if self.mode != "open" and "nomem" not in self.flags:
             self.prior_gain = recall_gain(self.model_name, ASSUMED_GAIN)
         if "online" in self.flags:
@@ -585,6 +607,7 @@ class Episode:
                 "player": None if self.player is None else {"model": self.player.model,
                                                             "trace": self.player.trace},
                 "actions": self.history, "shadow_chunks": self.shadow_chunks,
+                "cfg": self.cfg, "brief": self.brief,
                 "memory_entries": self.memory_entries, "flags": self.flags,
                 "anchored": self.anchor, "guide_via": self.guide_via,
                 "chunks": s.chunk_id, "seconds": round(len(self.frames) / FPS, 2),

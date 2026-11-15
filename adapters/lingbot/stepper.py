@@ -233,13 +233,15 @@ class LingBotStepper:
 
     # ----------------------------------------------------------------- guide
     @torch.no_grad()
-    def _encode_guide(self, frames, mask, erode=5, feather=2):
+    def _encode_guide(self, frames, mask, erode=None, feather=None):
         """Turn 12 remembered target frames (+ validity mask) into chunk latents.
 
         The VAE is causal in time, so the target frames are encoded after the
         last 9 frames actually shown, and the final three latents are kept.
         Returns (latents [16,3,h,w], mask [1,3,h,w] float) or None if too little
         of the chunk is covered."""
+        erode = getattr(self, "erode", 5) if erode is None else erode
+        feather = getattr(self, "feather", 2) if feather is None else feather
         ctx = self.shown[-9:]
         fill = frames.copy()
         fill[~mask] = np.broadcast_to(ctx[-1], frames.shape)[~mask]

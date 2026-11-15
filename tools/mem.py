@@ -25,7 +25,7 @@ import requests
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 API = "https://api.past.dev/api/v1"
 LOG = os.path.join(ROOT, "results", "memory_log.jsonl")
-AGENTS = ("controller", "critic", "cartographer", "director", "composer")
+AGENTS = ("controller", "critic", "cartographer", "director", "composer", "proposer", "experimenter")
 
 
 def _key():
