@@ -26,9 +26,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNS = ROOT / "runs"
-ARMS = {"baseline": "base95", "objective": "conf1", "final": "final1"}
+# WH_SET selects the case set: "held" (default, the 95 held-out cases) or "dev" (the 76 development-half
+# cases: the unmodified model's judge inputs from the earlier half-benchmark run, and the final program).
+SET = os.environ.get("WH_SET", "held")
+ARMS = {"held": {"baseline": "base95", "objective": "conf1", "final": "final1"},
+        "dev": {"baseline": "half1", "final": "final1dev"}}[SET]
 MODE = "lingbot2_14b_open"
-INP, BLIND = RUNS / "jin_held", RUNS / "jblind_held"
+INP, BLIND = RUNS / f"jin_{SET}", RUNS / f"jblind_{SET}"
+OUTNAME = {"held": "held_out", "dev": "dev_half"}[SET]
 DIMS = ("GC", "IF", "IE", "OE")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 
@@ -41,10 +46,13 @@ def sh(cmd, timeout=3600):
 
 def fetch(arm):
     run = ARMS[arm]
-    print(sh(["modal", "run", "modal_app/wh_modal.py::judge_inputs", "--run", run], 3000)[-300:])
     tmp = RUNS / f"jin_tmp_{run}"
-    tmp.mkdir(exist_ok=True)
-    sh(["modal", "volume", "get", "worldhold-runs", f"judge/{run}/{MODE}", str(tmp) + "/", "--force"], 3000)
+    if run == "half1":                      # already exported and downloaded on Saturday
+        tmp = RUNS / "jin_half1"
+    else:
+        print(sh(["modal", "run", "modal_app/wh_modal.py::judge_inputs", "--run", run], 3000)[-300:])
+        tmp.mkdir(exist_ok=True)
+        sh(["modal", "volume", "get", "worldhold-runs", f"judge/{run}/{MODE}", str(tmp) + "/", "--force"], 3000)
     dst = INP / arm
     dst.mkdir(parents=True, exist_ok=True)
     n = 0
@@ -63,7 +71,7 @@ def blind():
 
 
 def judge(p):
-    out = RUNS / f"gem_held_p{p}"
+    out = RUNS / f"gem_{SET}_p{p}"
     for workers in ("10", "4"):       # the second sweep picks up anything that failed
         r = sh([sys.executable, "-I", "-X", "utf8", "eval/openrouter_judge.py", "--inputs", str(BLIND), "--out",
                 str(out), "--transport", "gemini", "--workers", workers], 4 * 3600)
@@ -84,7 +92,7 @@ def tally():
         return "GC" if t.startswith("GC") else "IF" if t.startswith("IF") else "IE" if t in OE_INSIGHT_TASKS else "OE"
 
     bm = json.loads((BLIND / "blind_map.json").read_text())
-    passes = sorted(RUNS.glob("gem_held_p*"))
+    passes = sorted(RUNS.glob(f"gem_{SET}_p*"))
     per = {a: {} for a in ARMS}       # arm -> case -> [score per pass]
     gates = {a: {} for a in ARMS}
     for pd in passes:
@@ -131,11 +139,12 @@ def tally():
                 "wins": sum(mean[b][c] > mean[a][c] + 0.25 for c in common),
                 "losses": sum(mean[b][c] < mean[a][c] - 0.25 for c in common)}
 
-    out["paired"] = {"final_minus_baseline": paired("baseline", "final"),
-                     "objective_minus_baseline": paired("baseline", "objective"),
-                     "final_minus_objective": paired("objective", "final")}
+    out["paired"] = {"final_minus_baseline": paired("baseline", "final")}
+    if "objective" in ARMS:
+        out["paired"].update({"objective_minus_baseline": paired("baseline", "objective"),
+                              "final_minus_objective": paired("objective", "final")})
     out["per_case"] = {a: {c: [round(x, 2) for x in v] for c, v in sorted(per[a].items())} for a in ARMS}
-    (ROOT / "results" / "held_out.json").write_text(json.dumps(out, indent=1))
+    (ROOT / "results" / f"{OUTNAME}.json").write_text(json.dumps(out, indent=1))
     lines = ["| Arm | Cases | Geometry | Interaction | Insight | Out-of-sight | Overall |", "|---|---|---|---|---|---|---|"]
     names = {"baseline": "Unmodified model", "objective": "Objective in the prompt only", "final": "Final state program"}
     for a in ARMS:
@@ -143,7 +152,7 @@ def tally():
         lines.append(f"| {names[a]} | {t['n']} | " + " | ".join(
             "-" if t[d] is None else f"{t[d]:.2f}" for d in DIMS) + f" | {'-' if t['overall'] is None else format(t['overall'], '.2f')} |")
     lines.append("| Genie 3 (published, 171 cases) | 171 | 2.74 | 2.40 | 1.51 | 1.81 | 2.12 |")
-    (ROOT / "results" / "held_out.md").write_text("\n".join(lines) + "\n")
+    (ROOT / "results" / f"{OUTNAME}.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     print(json.dumps({k: out[k] for k in ("passes", "paired", "repeat_judging_mean_abs_diff") if k in out}, indent=1))
     for a in ARMS:
