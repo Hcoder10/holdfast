@@ -53,43 +53,13 @@ class RotationMemory:
         self.max_angle, self.min_spacing, self.border = max_angle, min_spacing, border
         self.keys = []  # (R c2w, frame uint8 HxWx3, chunk index, turn direction), oldest first
         self.exclude0 = None  # uint8 HxW mask in the first frame's view: never pinned
-        self.segs = []        # sweep id of each key (parallel to self.keys)
 
-    def add(self, frame, yaw, pitch=0.0, force=False, chunk=0, direction=0, seg=-1):
+    def add(self, frame, yaw, pitch=0.0, force=False, chunk=0, direction=0):
         r = rot(yaw, pitch)
         if not force and any(angle_between(r, k[0]) < self.min_spacing for k in self.keys):
             return False
         self.keys.append((r, frame.copy(), chunk, direction))
-        self.segs.append(seg)
         return True
-
-    def nearest(self, yaw, pitch=0.0, seg=None, max_angle=25.0):
-        """Heading-indexed recall for any action sequence: the single remembered frame
-        whose heading is closest to (yaw, pitch), warped by the small remaining angle.
-        One frame, never a composite, so there are no stitching seams. Frames from
-        the sweep in progress (`seg`) are skipped, so turning into new territory is
-        left to the model; everything seen before it is available, whatever path
-        the camera took to get back. Returns (image, mask) or (None, None)."""
-        rt = rot(yaw, pitch)
-        best, best_a = None, max_angle
-        for i, (r, frame, born, turned) in enumerate(self.keys):
-            if seg is not None and self.segs[i] == seg and born != FIRST_FRAME:
-                continue
-            a = angle_between(rt, r)
-            if a < best_a:
-                best, best_a = i, a
-        if best is None:
-            return None, None
-        r, frame = self.keys[best][0], self.keys[best][1]
-        H = self.K @ rt.T @ r @ self.Kinv
-        img = cv2.warpPerspective(frame, H, (self.w, self.h), flags=cv2.INTER_LINEAR)
-        valid = np.zeros((self.h, self.w), np.uint8)
-        b = self.border
-        valid[b:self.h - b, b:self.w - b] = 255
-        mask = cv2.warpPerspective(valid, H, (self.w, self.h), flags=cv2.INTER_NEAREST) > 0
-        if self.exclude0 is not None:
-            mask &= self.excluded(yaw, pitch) == 0
-        return img, mask
 
     def excluded(self, yaw, pitch=0.0):
         """Where the evolving target (marked in the first frame) falls in a view at
