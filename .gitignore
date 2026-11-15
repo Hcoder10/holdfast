@@ -13,3 +13,4 @@ runs/
 *.ckpt
 demo/*.mp4
 results/venue/
+demo/script_clips/
